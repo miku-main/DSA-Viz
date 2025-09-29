@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <!--
+    Basic document setup:
+    - UTF-8 for broad character support
+    - Responsive meta so layout scales across devices
+    - Title appears in browser tab and search results
+    - Two CSS files: base tokens/global styles + page layout
+  -->
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AlgoViz — Visualize Algorithms in the Browser</title>
+
+  <link rel="stylesheet" href="styles/base.css" />
+  <link rel="stylesheet" href="styles/layout.css" />
+</head>
+<body>
+  <!--
+    Header (Top Bar):
+    - Contains the app brand/title
+    - Algorithm selector (disabled on Day 1; enabled later)
+    - Theme toggle button (wired up on Day 2)
+    - Everything is keyboard-accessible and labeled for screen readers
+  -->
+  <header class="topbar" role="banner">
+    <h1 class="brand" aria-label="AlgoViz Home">AlgoViz</h1>
+
+    <label class="sr-only" for="algoSelect">Choose an algorithm</label>
+    <select id="algoSelect" class="select" aria-label="Algorithm selector" disabled>
+      <optgroup label="Sorting">
+        <option>Bubble Sort</option>
+        <option>Insertion Sort</option>
+        <option>Merge Sort</option>
+        <option>Quick Sort</option>
+      </optgroup>
+      <optgroup label="Data Structures">
+        <option>Stack</option>
+        <option>Queue</option>
+        <option>Binary Search Tree</option>
+      </optgroup>
+      <optgroup label="Graphs">
+        <option>Breadth-First Search</option>
+        <option>Depth-First Search</option>
+      </optgroup>
+    </select>
+
+    <button id="themeToggle" class="icon-btn" aria-label="Toggle theme" title="Toggle theme" disabled>
+      🌓
+    </button>
+  </header>
+
+  <!--
+    Main Layout:
+    - Two-column grid: left visualization canvas, right side panel
+    - Side panel will host code view + metrics (placeholders on Day 1)
+  -->
+  <main class="layout" role="main">
+    <!--
+      Visualization Canvas:
+      - This is where we’ll render SVGs/DOM for the algorithms.
+      - aria-live="polite" announces changes without being disruptive.
+      - tabindex="0" so users can focus this area (for future keyboard control).
+    -->
+    <section id="canvas" class="canvas" aria-live="polite" aria-label="Visualization area" tabindex="0">
+      <!-- Placeholder hint for Day 1 -->
+      <div class="placeholder">
+        <div class="placeholder-title">Visualization Area</div>
+        <div class="placeholder-sub">Choose an algorithm and press Play (coming Day 2+)</div>
+      </div>
+    </section>
+
+    <!--
+      Side Panel:
+      - Code pane will show highlighted source lines (Day 4)
+      - Metrics gives quick counters (ops, comparisons, swaps)
+    -->
+    <aside class="side" aria-label="Details panel">
+      <section class="panel">
+        <header class="panel-header">
+          <h2 class="panel-title">Code</h2>
+        </header>
+        <pre id="codePane" class="code" aria-label="Code listing">
+/* Day 1:
+   Code for the selected algorithm will appear here with line highlighting.
+   We'll wire this up after we build the event engine (Day 2–4).
+*/
+        </pre>
+      </section>
+
+      <section class="panel">
+        <header class="panel-header">
+          <h2 class="panel-title">Metrics</h2>
+        </header>
+        <div class="metrics" role="status" aria-live="polite">
+          <div>Operations: <span id="ops">0</span></div>
+          <div>Comparisons: <span id="cmps">0</span></div>
+          <div>Swaps: <span id="swps">0</span></div>
+        </div>
+      </section>
+    </aside>
+  </main>
+
+  <!--
+    Controls Footer:
+    - Transport controls for the animation timeline
+    - Speed and dataset controls
+    - Buttons are disabled on Day 1 to clarify MVP phases
+  -->
+  <footer class="controls" role="contentinfo">
+    <div class="controls-left">
+      <button id="play" class="btn" disabled>Play</button>
+      <button id="step" class="btn" disabled>Step</button>
+      <button id="reset" class="btn btn-secondary" disabled>Reset</button>
+    </div>
+
+    <div class="controls-right">
+      <label class="control">
+        <span class="control-label">Speed</span>
+        <input id="speed" class="range" type="range" min="0.25" max="3" step="0.25" value="1" disabled />
+      </label>
+
+      <button id="randomize" class="btn" disabled>Randomize Data</button>
+    </div>
+  </footer>
+
+  <!--
+    Main JS module:
+    - For Day 1 we just wire basic focus management and safe no-ops.
+    - Real timeline/animator comes on Day 2.
+  -->
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>

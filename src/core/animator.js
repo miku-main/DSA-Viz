@@ -1,8 +1,8 @@
 /**
  * Animator
- * - Drives time forward using requestAnimationFram (rAF)
+ * - Drives time forward using requestAnimationFrame (rAF)
  * - Consumes a Timeline and calls `draw(eventsForThisTick)` each frame
- * - Supports Play/Pause/Step/Reset and a speed multipler
+ * - Supports Play/Pause/Step/Reset and a speed multiplier
  */
 
 export class Animator {
@@ -46,8 +46,9 @@ export class Animator {
         // Go back to time 0 and clear the screen via a zero-event draw.
         this.t = 0;
         this.timeline?.seek(0);
-        this.draw([]);
-        this.onTick(this.t, []);
+        const initEvents = this.timeline ? this.timeline.next(0) : [];
+        this.draw(initEvents);
+        this.onTick(this.t, initEvents);
     }
 
     _loop() {

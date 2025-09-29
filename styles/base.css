@@ -183,7 +183,7 @@ button:disabled, select:disabled, input:disabled {
 
 /* Compare highlight: temporary emphasis */
 .bar-compare {
-  fill: #64748b;
+  fill: #28303b;
 }
 
 /* Swap highlight: stronger emphasis */
@@ -197,4 +197,15 @@ button:disabled, select:disabled, input:disabled {
   font-size: 12px;
   pointer-events: none;
   user-select: none;
+}
+
+/* Bar state for positions confirmed sorted after a pass */
+.bar-sorted {
+  fill: #16a34a; /* green-ish */
+}
+
+/* Final all-done tint applied to all bars */
+.bar-done {
+  opacity: 0.95;
+  filter: saturate(1.1);
 }

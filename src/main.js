@@ -9,10 +9,16 @@
  * - Render a simple bar chart (SVG) for an array
  * - Use a mocked event list (compare/swap/set) to prove deterministic playback
  * - Enable Play/Step/Reset/Speed controls
+ * 
+ * Third:
+ * - Use a bubble sort to generate the event timeline
+ * - Keep the same Animator + Timeline + SVG renderer
+ * - Add handlers for new events: markSortedEnd, done
  */
 
 import { Animator } from './core/animator.js';
 import { Timeline } from './core/timeline.js';
+import { bubbleSort } from './algos/sorting/bubble.js';
 
 // Query a helper to avoid repetition
 const $ = (sel) => document.querySelector(sel);
@@ -56,6 +62,8 @@ const state = {
   ops: 0,
   cmps: 0,
   swps: 0,
+  done: false,
+  sortedMarkers: new Set(), // indices confirmed sorted
 };
 
 // Create an SVG inside the canvas and draw the bars once
@@ -139,12 +147,13 @@ function updateBar(i, newVal) {
 }
 
 // ---- Mocked event list (like bubble sort trace)
+// REMOVE LATER OR NOW
 // Event types:
 // - init: initial array shown (tick 0)
 // - compare: highlight two indices being compared
 // - swap: swap values at i and j (payload carries the updated array state)
 // - clear: clear any highlights
-function mockEventsFromArray(arr) {
+/* function mockEventsFromArray(arr) {
   const a = arr.slice();
   const events = [{ t: 0, type: 'init', payload: { a: a.slice() } }];
   let t = 1;
@@ -163,6 +172,7 @@ function mockEventsFromArray(arr) {
   }
   return events;
 }
+*/
 
 // Draw function: consume events and update the SVG/metrics
 function draw(events) {
@@ -171,6 +181,8 @@ function draw(events) {
       case 'init': {
         // Set initial data and draw bars
         state.data = ev.payload.a.slice();
+        state.done = false;
+        state.sortedMarkers.clear();
         initSVG();
         break;
       }
@@ -182,7 +194,7 @@ function draw(events) {
       }
       case 'swap': {
         state.swps++;
-        els.cmps.textContent = String(state.swps);
+        els.swps.textContent = String(state.swps);
         const { i, j, a} = ev.payload;
         // Update both bars to new values
         updateBar(i, a[i]);
@@ -192,6 +204,18 @@ function draw(events) {
       }
       case 'clear': {
         clearHighlights();
+        break;
+      }
+      case 'markSortedEnd': {
+        // Persist a visual marker at the index that bubbled to the end
+        state.sortedMarkers.add(ev.payload.index);
+        clearHighlights(); // re-applies sorted markers
+        break;
+      }
+      case 'done': {
+        state.done = true;
+        clearHighlights(); // applies bar-done style to all bars
+        announce('Bubble sort complete.');
         break;
       }
       default:
@@ -205,15 +229,21 @@ function draw(events) {
 
 function highlightPair(i, j, cls) {
   clearHighlights();
-  const bi = state.barEls[i];
-  const bj = state.barEls[j];
-  bi?.classList.add(cls);
-  bj?.classList.add(cls);
+  state.barEls[i]?.classList.add(cls);
+  state.barEls[j]?.classList.add(cls);
 }
 
 function clearHighlights() {
   for (const r of state.barEls) {
-    r.classList.remove('bar-compare', 'bar-swap');
+    r.classList.remove('bar-compare', 'bar-swap', 'bar-done', 'bar-sorted');
+  }
+
+  // Re-apply sorted markers after clearning (they persist across steps)
+  for (const idx of state.sortedMarkers) {
+    state.barEls[idx]?.classList.add('bar-sorted');
+  }
+  if (state.done) {
+    for (const r of state.barEls) r.classList.add('bar-done');
   }
 }
 
@@ -221,22 +251,22 @@ function clearHighlights() {
 let animator;
 let timeline;
 
-function buildNewDemo() {
+function buildFromBubbleSort() {
+  // Reset live metrics
   state.ops = state.cmps = state.swps = 0;
   els.ops.textContent = els.cmps.textContent = els.swps.textContent = '0';
-  const data = state.data; // keep current data (may be randomized)
-  const events = mockEventsFromArray(data);
+
+  const events = bubbleSort(state.data);
   timeline = new Timeline(events);
   animator.setTimeline(timeline);
-  // Immediately draw the initial state (tick 0 events)
+  // Reset & render tick 0
   animator.reset();
-  animator.step(); // Step to t=1 to render 'init' nearty
 }
 
 function randomizeData() {
   const n = 8 + Math.floor(Math.random() * 8); // 8...15 items
   state.data = Array.from({ length: n}, () => 1 + Math.floor(Math.random() * 20));
-  buildNewDemo();
+  buildFromBubbleSort();
   announce('Randomized dataset');
 }
 
@@ -244,14 +274,14 @@ function randomizeData() {
 window.addEventListener('DOMContentLoaded', () => {
   animator = new Animator({
     draw,
-    onTick: (t) => {
+    onTick: () => {
       // Could display time if I want it (just thinking)
-      console.log('tick', Math.floor(t));
+      // console.log('tick', Math.floor(t));
     },
   });
 
   initSVG(); // draw starter bars from initial state
-  buildNewDemo(); // build mock timeline and show it
+  buildFromBubbleSort(); // build mock timeline and show it
 });
 
 // Control wiring

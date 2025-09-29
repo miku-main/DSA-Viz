@@ -1,8 +1,8 @@
 /**
- * Day 1 JS:
- * - Keep it minimal and safe.
- * - We wire up controls as disabled placeholders and ensure basic focus management.
- * - Real animation/timeline (Animator + Timeline + Event Recorder) comes on Day 2+.
+ * First JS:
+ * - Keeping it minimal and safe.
+ * - Wire up controls as disabled placeholders and ensure basic focus management
+ * - Real animation/timeline (Animator + Timeline + Event Recorder) comes later
  */
 
 // Query a helper to avoid repetition
@@ -24,13 +24,12 @@ const els = {
   swps: $('#swps'),
 };
 
-// For Day 1, everything remains disabled. We still add safe listeners so the UI
-// feels “alive” and we can progressively enable features in later days without
-// changing markup.
+// For now, everything remains disabled. Still gonna add safe listeners so the UI
+// feels "alive" and then progressively enable features in later without changing markup.
 
-/** Announce helper for accessibility (aria-live region on canvas) */
+// Announce helper for accessibility (aria-live region on canvas)
 function announce(msg) {
-  // Create a visually-hidden announcer inside the canvas for screen readers
+  // Create a visually-hidden announcer inside the cancas for screen readers
   const announcer = document.createElement('div');
   announcer.className = 'sr-only';
   announcer.textContent = msg;
@@ -39,12 +38,12 @@ function announce(msg) {
   setTimeout(() => announcer.remove(), 500);
 }
 
-/** Safe no-op click handler to provide feedback on disabled controls (Day 1 only) */
+// Safe no-op click handler to provide feedback on disabled controls (for now)
 function disabledHint(e) {
-  // If control is disabled, softly communicate what’s coming next
+  // If control is disabled, softly communicate what's coming next
   if (e.currentTarget.disabled) {
     e.preventDefault();
-    announce('This control will be enabled in upcoming milestones.');
+    announce('This control will be enabled later');
   }
 }
 
@@ -64,21 +63,21 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-// Initial welcome message in the code pane so the area isn’t empty.
+// Initial welcome message in the code pane so the area isn't empty.
 const welcome = `
 /*
   Welcome to AlgoViz!
 
-  Day 1 goals completed:
-  - Project structure (HTML/CSS/JS) with accessible, responsive layout
+  Current completion:
+  - Project strucutre (HTML/CSS/JS) with accessible, responsive layout
   - Top bar, visualization canvas, side panel, and controls footer
   - Design tokens and consistent styling
   - Keyboard focus management and screen-reader announcements
 
-  Next (Day 2):
+  Next goal:
   - Implement Animator & Timeline classes
   - Wire Play/Step/Reset and enable the controls
   - Render a mocked event list to prove the loop
-*/
+*/ 
 `;
 els.codePane.textContent = welcome.trim();

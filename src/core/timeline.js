@@ -20,7 +20,7 @@ export class Timeline {
         if (tick === this._lastTick) return out;
         this._lastTick = tick;
 
-        while (this._idx < this,events.length && this.events[this._idx].t <= tick) {
+        while (this._idx < this.events.length && this.events[this._idx].t <= tick) {
             out.push(this.events[this._idx++]);
         }
         return out;

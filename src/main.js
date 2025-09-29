@@ -1,9 +1,18 @@
 /**
- * First JS:
+ * First:
  * - Keeping it minimal and safe.
  * - Wire up controls as disabled placeholders and ensure basic focus management
  * - Real animation/timeline (Animator + Timeline + Event Recorder) comes later
+ * 
+ * Second:
+ * - Add Animator + Timeline
+ * - Render a simple bar chart (SVG) for an array
+ * - Use a mocked event list (compare/swap/set) to prove deterministic playback
+ * - Enable Play/Step/Reset/Speed controls
  */
+
+import { Animator } from './core/animator.js';
+import { Timeline } from './core/timeline.js';
 
 // Query a helper to avoid repetition
 const $ = (sel) => document.querySelector(sel);
@@ -24,8 +33,10 @@ const els = {
   swps: $('#swps'),
 };
 
-// For now, everything remains disabled. Still gonna add safe listeners so the UI
-// feels "alive" and then progressively enable features in later without changing markup.
+// Make controls active
+[els.play, els.step, els.reset, els.speed, els.randomize, els.algoSelect].forEach(
+  (el) => el && (el.disabled = false)
+);
 
 // Announce helper for accessibility (aria-live region on canvas)
 function announce(msg) {
@@ -37,47 +48,242 @@ function announce(msg) {
   // Remove after it has been read
   setTimeout(() => announcer.remove(), 500);
 }
+// Simple bar renderer state
+const state = {
+  data: [5, 2, 7, 1, 6, 4, 3], // Initial demo array
+  svg: null,
+  barEls: [],
+  ops: 0,
+  cmps: 0,
+  swps: 0,
+};
 
-// Safe no-op click handler to provide feedback on disabled controls (for now)
-function disabledHint(e) {
-  // If control is disabled, softly communicate what's coming next
-  if (e.currentTarget.disabled) {
-    e.preventDefault();
-    announce('This control will be enabled later');
+// Create an SVG inside the canvas and draw the bars once
+function initSVG() {
+  els.canvas.innerHTML = ''; // clear placeholder
+  const w = els.canvas.clientWidth || 640;
+  const h = Math.max(els.canvas.clientHeight, 320);
+
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('width', '100%')
+  svg.setAttribute('height', '100%')
+  svg.setAttribute('viewBox', `0 0 ${w} ${h}`)
+  svg.setAttribute('role', 'img')
+  svg.setAttribute('aria-label', 'Array visualization as bars')
+  els.canvas.appendChild(svg);
+
+  state.svg = svg;
+  state.barEls = [];
+
+  const n = state.data.length;
+  const gap = 6;
+  const barW = (w - gap * (n + 1)) / n;
+  const maxVal = Math.max(...state.data);
+  const scaleY = (val) => (val / maxVal) * (h - 24); // leave top padding
+
+  for (let i = 0; i < n; i++) {
+    const val = state.data[i];
+    const x = gap + i * (barW + gap);
+    const barH = scaleY(val);
+    const y = h - barH;
+
+    const rect = document.createElementNS(svg.namespaceURI, 'rect');
+    rect.setAttribute('x', String(x));
+    rect.setAttribute('y', String(y));
+    rect.setAttribute('width', String(barW));
+    rect.setAttribute('height', String(barH));
+    rect.setAttribute('rx', '6');
+    rect.setAttribute('class', 'bar');
+    rect.dataset.index = String(i);
+
+    svg.appendChild(rect);
+    state.barEls.push(rect);
+
+    // Value label (helpful for demo)
+    const txt = document.createElementNS(svg.namespaceURI, 'text');
+    txt.setAttribute('x', String(x + barW / 2));
+    txt.setAttribute('y', String(y - 6));
+    txt.setAttribute('text-anchor', 'middle');
+    txt.setAttribute('class', 'bar-label');
+    txt.textContent = String(val);
+    svg.appendChild(txt);
   }
 }
 
-// Attach listeners
-[els.play, els.step, els.reset, els.randomize, els.themeToggle].forEach(btn => {
-  btn?.addEventListener('click', disabledHint);
-});
-els.speed?.addEventListener('input', disabledHint);
-els.algoSelect?.addEventListener('change', disabledHint);
+// Update two bars' heights after a swap/set
+function updateBar(i, newVal) {
+  const w = state.svg.viewBox.baseVal.width || els.canvas.clientWidth || 640;
+  const h = state.svg.viewBox.baseVal.height || Math.max(els.canvas.clientHeight, 320);
+  const n = state.data.length;
+  const gap = 6;
+  const barW = (w - gap * (n + 1)) / n;
+  const maxVal = Math.max(...state.data);
+  const scaleY = (val) => (val / maxVal) * (h - 24);
 
-// Keyboard affordance: press "/" to focus the algorithm select quickly
-document.addEventListener('keydown', (e) => {
-  if (e.key === '/') {
-    e.preventDefault();
-    els.algoSelect?.focus();
-    announce('Algorithm selector focused.');
+  // update data
+  state.data[i] = newVal;
+
+  // update bar shape
+  const rect = state.barEls[i];
+  const barH = scaleY(newVal);
+  const y = h - barH;
+  rect.setAttribute('y', String(y));
+  rect.setAttribute('height', String(barH));
+
+  // update label (next sibling is the text we appended after rect)
+  const txt = rect.nextSibling;
+  if (txt && txt.tagName === 'text') {
+    txt.setAttribute('y', String(y - 6));
+    txt.textContent = String(newVal);
+  }
+}
+
+// ---- Mocked event list (like bubble sort trace)
+// Event types:
+// - init: initial array shown (tick 0)
+// - compare: highlight two indices being compared
+// - swap: swap values at i and j (payload carries the updated array state)
+// - clear: clear any highlights
+function mockEventsFromArray(arr) {
+  const a = arr.slice();
+  const events = [{ t: 0, type: 'init', payload: { a: a.slice() } }];
+  let t = 1;
+
+  for (let i = 0; i < a.length - 1; i++) {
+    for (let j = 0; j < a.length - 1 - i; j++) {
+      events.push({ t: t++, type: 'compare', payload: { i: j, j: j + 1} });
+      if (a[j] > a[j + 1]) {
+        const tmp = a[j];
+        a[j] = a[j + 1];
+        a[j + 1] = tmp;
+        events.push({t: t++, type: 'swap', payload: { i: j, j: j + 1, a: a.slice() } });
+      }
+      events.push({ t: t++, type: 'clear', payload: {} });
+    }
+  }
+  return events;
+}
+
+// Draw function: consume events and update the SVG/metrics
+function draw(events) {
+  for (const ev of events) {
+    switch (ev.type) {
+      case 'init': {
+        // Set initial data and draw bars
+        state.data = ev.payload.a.slice();
+        initSVG();
+        break;
+      }
+      case 'compare': {
+        state.cmps++;
+        els.cmps.textContent = String(state.cmps);
+        highlightPair(ev.payload.i, ev.payload.j, 'bar-compare');
+        break;
+      }
+      case 'swap': {
+        state.swps++;
+        els.cmps.textContent = String(state.swps);
+        const { i, j, a} = ev.payload;
+        // Update both bars to new values
+        updateBar(i, a[i]);
+        updateBar(j, a[j]);
+        highlightPair(i, j, 'bar-swap');
+        break;
+      }
+      case 'clear': {
+        clearHighlights();
+        break;
+      }
+      default:
+        break;
+    }
+    // Count all events as "operations" for a simple live metric
+    state.ops++;
+    els.ops.textContent = String(state.ops);
+  }
+}
+
+function highlightPair(i, j, cls) {
+  clearHighlights();
+  const bi = state.barEls[i];
+  const bj = state.barEls[j];
+  bi?.classList.add(cls);
+  bj?.classList.add(cls);
+}
+
+function clearHighlights() {
+  for (const r of state.barEls) {
+    r.classList.remove('bar-compare', 'bar-swap');
+  }
+}
+
+// Boot: Build a timeline from a mock trace and attack Animator
+let animator;
+let timeline;
+
+function buildNewDemo() {
+  state.ops = state.cmps = state.swps = 0;
+  els.ops.textContent = els.cmps.textContent = els.swps.textContent = '0';
+  const data = state.data; // keep current data (may be randomized)
+  const events = mockEventsFromArray(data);
+  timeline = new Timeline(events);
+  animator.setTimeline(timeline);
+  // Immediately draw the initial state (tick 0 events)
+  animator.reset();
+  animator.step(); // Step to t=1 to render 'init' nearty
+}
+
+function randomizeData() {
+  const n = 8 + Math.floor(Math.random() * 8); // 8...15 items
+  state.data = Array.from({ length: n}, () => 1 + Math.floor(Math.random() * 20));
+  buildNewDemo();
+  announce('Randomized dataset');
+}
+
+// Initialize once DOM is ready
+window.addEventListener('DOMContentLoaded', () => {
+  animator = new Animator({
+    draw,
+    onTick: (t) => {
+      // Could display time if I want it (just thinking)
+      console.log('tick', Math.floor(t));
+    },
+  });
+
+  initSVG(); // draw starter bars from initial state
+  buildNewDemo(); // build mock timeline and show it
+});
+
+// Control wiring
+els.play.addEventListener('click', () => {
+  if (animator.playing) {
+    animator.pause();
+    els.play.textContent = 'Play';
+  } else {
+    animator.play();
+    els.play.textContent = 'Pause';
   }
 });
 
-// Initial welcome message in the code pane so the area isn't empty.
-const welcome = `
-/*
-  Welcome to AlgoViz!
+els.step.addEventListener('click', () => {
+  animator.step();
+});
 
-  Current completion:
-  - Project strucutre (HTML/CSS/JS) with accessible, responsive layout
-  - Top bar, visualization canvas, side panel, and controls footer
-  - Design tokens and consistent styling
-  - Keyboard focus management and screen-reader announcements
 
-  Next goal:
-  - Implement Animator & Timeline classes
-  - Wire Play/Step/Reset and enable the controls
-  - Render a mocked event list to prove the loop
-*/ 
-`;
-els.codePane.textContent = welcome.trim();
+els.reset.addEventListener('click', () => {
+  animator.reset();
+  // After reset, show tick 0 again
+  animator.step();
+  clearHighlights();
+  announce('Reset to start.');
+});
+
+els.speed.addEventListener('input', (e) => {
+  animator.setSpeed(e.target.value);
+  announce(`Speed ${e.target.value}x`);
+});
+
+els.randomize.addEventListener('click', () => {
+  randomizeData();
+  els.play.textContent = 'Play'; // ensure label resets
+});

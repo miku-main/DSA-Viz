@@ -173,3 +173,28 @@ button:disabled, select:disabled, input:disabled {
   font-size: 14px;
   opacity: 0.8;
 }
+
+/* Bars & highlights */
+.bar {
+  fill: #334155;           /* default bar color */
+  stroke: #1f2937;         /* subtle border */
+  transition: transform .08s linear, fill .08s linear;
+}
+
+/* Compare highlight: temporary emphasis */
+.bar-compare {
+  fill: #64748b;
+}
+
+/* Swap highlight: stronger emphasis */
+.bar-swap {
+  fill: #38bdf8;
+}
+
+/* Value labels over bars */
+.bar-label {
+  fill: var(--muted);
+  font-size: 12px;
+  pointer-events: none;
+  user-select: none;
+}

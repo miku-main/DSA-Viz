@@ -209,3 +209,44 @@ button:disabled, select:disabled, input:disabled {
   opacity: 0.95;
   filter: saturate(1.1);
 }
+
+/* Code Pane Highlighting */
+.code {
+  counter-reset: codeLine;
+  line-height: 1.5;
+  white-space: pre; /* preserve spaces/newlines */
+}
+
+/* render each line inside a <div class="code-line"> */
+.code-line {
+  padding: 2px 8px 2px 42px; /* room for line numbers */
+  position: relative;
+}
+
+/* Line numbers */
+.code-line::before {
+  counter-increment: codeLine;
+  content: counter(codeLine);
+  position: absolute;
+  left: 10px;
+  top: 0;
+  bottom: 0;
+  display: inline-flex;
+  align-items: center;
+  color: var(--muted);
+  opacity: 0.75;
+  min-width: 20px;
+  justify-content: flex-end;
+}
+
+/* Active line highlight */
+.code-line.h1 {
+  background: rgba(56, 189, 248, 0.15);
+  border-left: 3px solid var(--accent);
+}
+
+/* Gentle scroll behavior when focusing lines */
+#codePane {
+  scroll-behavior: smooth;
+}
+

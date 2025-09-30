@@ -1,16 +1,17 @@
 # DSA Visual
-# Part 1:
+# Part 1: Project Setup
 Welcome to AlgoViz (Name will change later/maybe)
 
 HTML (index.html)
-1. Modern, accessible, and responsive across devices
+1. Created the basic page structure with a topbar, canvas, side panel, and footer controls
 
-2. Split CSS into base.css and layout.css
+2. Added placeholder buttons and toggles (Play, Step, Reset, Speed, Randomize, Theme toggle)
+
+3. Split CSS into base.css and layout.css
  - base.css = design tokens, colors, spacing, resets
  - layout.css = structural rules (grid, panels, canvas)
-This makes the project easier to scale and maintainability
 
-3. Controls in footer (themeToggle, randomize)
+4. Controls in footer (themeToggle, randomize)
  - Footer has secondary actions. Randomize button starts disabled until ready.
 
 CSS (base.css)

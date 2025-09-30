@@ -1,4 +1,4 @@
-# Part 2:
+# Part 2: Core Animation and Demo Playback
 
 animator.js
 1. Purpose: Drives logical time using requestAnimationFrame

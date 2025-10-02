@@ -26,7 +26,7 @@
  */
 
 export function bubbleSort(arr) {
-    const a = arr.slice() // never mutate the caller's array
+    const a = arr.slice(); // never mutate the caller's array
     /** @type {Array<{t:number,type:string,payload:any}>} */
     const events = [];
 
@@ -66,10 +66,7 @@ export function bubbleSort(arr) {
         // After each outer pass, the last element is in correct place
         // Helps learners see progress
         // End of outer pass -> mark the sorted tail; line 13 (comment line)
-        events.push({
-            t: t++,
-            type: 'markSortedEnd',
-            payload: { index: a.length - 1 - i, line: 13 },
+        events.push({ t: t++, type: 'markSortedEnd', payload: { index: a.length - 1 - i, line: 13 },
         });
     }
     // Final signal to UI that it is done (enable final styling)

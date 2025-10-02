@@ -214,12 +214,12 @@ button:disabled, select:disabled, input:disabled {
 .code {
   counter-reset: codeLine;
   line-height: 1.5;
-  white-space: pre; /* preserve spaces/newlines */
+  white-space: pre;         /* preserve spaces/newlines */
 }
 
 /* render each line inside a <div class="code-line"> */
 .code-line {
-  padding: 2px 8px 2px 42px; /* room for line numbers */
+  padding: 2px 8px 2px 42px;           /* room for line numbers */
   position: relative;
 }
 
@@ -240,7 +240,7 @@ button:disabled, select:disabled, input:disabled {
 }
 
 /* Active line highlight */
-.code-line.h1 {
+.code-line.hl {
   background: rgba(56, 189, 248, 0.15);
   border-left: 3px solid var(--accent);
 }
@@ -249,4 +249,3 @@ button:disabled, select:disabled, input:disabled {
 #codePane {
   scroll-behavior: smooth;
 }
-

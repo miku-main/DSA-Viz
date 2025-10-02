@@ -60,7 +60,7 @@ function announce(msg) {
   announcer.textContent = msg;
   els.canvas.appendChild(announcer);
   // Remove after it has been read
-  setTimeout(() => announcer.remove(), 500);
+  setTimeout(() => announcer.remove(), 400);
 }
 // Simple bar renderer state
 const state = {
@@ -249,6 +249,26 @@ function updateBar(i, newVal) {
 }
 */
 
+function highlightPair(i, j, cls) {
+  clearHighlights();
+  state.barEls[i]?.classList.add(cls);
+  state.barEls[j]?.classList.add(cls);
+}
+
+function clearHighlights() {
+  for (const r of state.barEls) {
+    r.classList.remove('bar-compare', 'bar-swap', 'bar-done', 'bar-sorted');
+  }
+
+  // Re-apply sorted markers after clearning (they persist across steps)
+  for (const idx of state.sortedMarkers) {
+    state.barEls[idx]?.classList.add('bar-sorted');
+  }
+  if (state.done) {
+    for (const r of state.barEls) r.classList.add('bar-done');
+  }
+}
+
 // Draw function: consume events and update the SVG/metrics
 function draw(events) {
   for (const ev of events) {
@@ -303,26 +323,6 @@ function draw(events) {
     // Count all events as "operations" for a simple live metric
     state.ops++;
     els.ops.textContent = String(state.ops);
-  }
-}
-
-function highlightPair(i, j, cls) {
-  clearHighlights();
-  state.barEls[i]?.classList.add(cls);
-  state.barEls[j]?.classList.add(cls);
-}
-
-function clearHighlights() {
-  for (const r of state.barEls) {
-    r.classList.remove('bar-compare', 'bar-swap', 'bar-done', 'bar-sorted');
-  }
-
-  // Re-apply sorted markers after clearning (they persist across steps)
-  for (const idx of state.sortedMarkers) {
-    state.barEls[idx]?.classList.add('bar-sorted');
-  }
-  if (state.done) {
-    for (const r of state.barEls) r.classList.add('bar-done');
   }
 }
 

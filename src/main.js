@@ -109,7 +109,7 @@ const ALGOS = {
     id: 'bubble',
     name: 'Bubble Sort',
     run: bubbleSort,
-    condeLines: bubbleTeachSource,
+    codeLines: bubbleTeachSource,
     lineMap: bubbleLineMap,
   },
   insertion: {
@@ -371,7 +371,6 @@ function draw(events) {
       case 'done': {
         state.done = true;
         clearHighlights(); // applies bar-done style to all bars
-        announce('Bubble sort complete.');
         break;
       }
       default:
@@ -414,9 +413,6 @@ function randomizeData() {
 window.addEventListener('DOMContentLoaded', () => {
   animator = new Animator ({ draw }); 
   initSVG();
-  if (els.algoSelect) {
-    els.algoSelect.value = 'bubble';
-  }
   buildFromCurrentAlgo();
 });
 // Switch algorithms on change

@@ -210,6 +210,15 @@ button:disabled, select:disabled, input:disabled {
   filter: saturate(1.1);
 }
 
+/* Extra visual states for insertion sort */
+.bar-shift {
+  fill: #94a3b8; /* mild highlight when shifting right */
+}
+
+.bar-insert {
+  fill: #22c55e; /* pop when key is inserted */
+}
+
 /* Code Pane Highlighting */
 .code {
   counter-reset: codeLine;

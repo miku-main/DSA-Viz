@@ -29,19 +29,19 @@
     <label class="sr-only" for="algoSelect">Choose an algorithm</label>
     <select id="algoSelect" class="select" aria-label="Algorithm selector" disabled>
       <optgroup label="Sorting">
-        <option>Bubble Sort</option>
-        <option>Insertion Sort</option>
-        <option>Merge Sort</option>
-        <option>Quick Sort</option>
+        <option value="bubble">Bubble Sort</option>
+        <option value="insertion">Insertion Sort</option>
+        <option value="merge" disabled>Merge Sort</option>
+        <option value="quick" disabled>Quick Sort</option>
       </optgroup>
       <optgroup label="Data Structures">
-        <option>Stack</option>
-        <option>Queue</option>
-        <option>Binary Search Tree</option>
+        <option value="stack" disabled>Stack</option>
+        <option value="queue" disabled>Queue</option>
+        <option value="bst" disabled>Binary Search Tree</option>
       </optgroup>
       <optgroup label="Graphs">
-        <option>Breadth-First Search</option>
-        <option>Depth-First Search</option>
+        <option value="bfs" disabled>Breadth-First Search</option>
+        <option value="dfs" disabled>Depth-First Search</option>
       </optgroup>
     </select>
 

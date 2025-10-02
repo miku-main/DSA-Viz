@@ -413,6 +413,7 @@ function randomizeData() {
 window.addEventListener('DOMContentLoaded', () => {
   animator = new Animator ({ draw }); 
   initSVG();
+  els.algoSelect && (els.algoSelect.value = 'bubble');
   buildFromCurrentAlgo();
 });
 // Switch algorithms on change

@@ -27,6 +27,7 @@
 import { Animator } from './core/animator.js';
 import { Timeline } from './core/timeline.js';
 import { bubbleSort } from './algos/sorting/bubble.js';
+import { insertionSort } from './algos/sorting/insertion.js';
 
 // Query a helper to avoid repetition
 const $ = (sel) => document.querySelector(sel);
@@ -52,28 +53,6 @@ const els = {
   (el) => el && (el.disabled = false)
 );
 
-// Announce helper for accessibility (aria-live region on canvas)
-function announce(msg) {
-  // Create a visually-hidden announcer inside the cancas for screen readers
-  const announcer = document.createElement('div');
-  announcer.className = 'sr-only';
-  announcer.textContent = msg;
-  els.canvas.appendChild(announcer);
-  // Remove after it has been read
-  setTimeout(() => announcer.remove(), 400);
-}
-// Simple bar renderer state
-const state = {
-  data: [5, 2, 7, 1, 6, 4, 3], // Initial demo array
-  svg: null,
-  barEls: [],
-  ops: 0,
-  cmps: 0,
-  swps: 0,
-  done: false,
-  sortedMarkers: new Set(), // indices confirmed sorted
-};
-
 // CODE PANE (Teach-mode Bubble Sort)
 // Display-only source (what learners expect)
 const bubbleTeachSource = [
@@ -94,6 +73,56 @@ const bubbleTeachSource = [
   ' return a;',                                             // 15
   '}',                                                      // 16
 ];
+
+const insertionTeachSource = [
+  'function insertionSort(arr) {',                            // 1
+  '  const a = arr.slice();',                                 // 2
+  '  for (let i = 1; i < a.length; i++) {',                   // 3
+  '    const key = a[i];',                                    // 4
+  '    let j = i - 1;',                                       // 5
+  '    while (j >= 0 && a[j] > key) {',                       // 6
+  '      a[j + 1] = a[j];   // shift right',                  // 7
+  '      j--;',                                               // 8
+  '    }',                                                    // 9
+  '    a[j + 1] = key;    // insert key',                     // 10
+  '    // prefix [0..i] is now sorted',                       // 11
+  '  }',                                                      // 12
+  '  return a;',                                              // 13
+  '}',                                                        // 14
+];
+
+// Fallback type -> line maps (used if an event lacks payload.line)
+const bubbleLineMap = { init: 2, compare: 8, swap: 9, markSortedEnd: 13, done: 15 };
+const insertionLineMap = {
+  init: 2,
+  compare: 6,   // compare key with a[j]
+  shift: 7,     // shift right
+  insert: 10,   // place key
+  markSortedPrefix: 11,
+  clear: 0,
+  done: 13,
+};
+
+// Algorithm registry
+const ALGOS = {
+  bubble: {
+    id: 'bubble',
+    name: 'Bubble Sort',
+    run: bubbleSort,
+    condeLines: bubbleTeachSource,
+    lineMap: bubbleLineMap,
+  },
+  insertion: {
+    id: 'insertion',
+    name: 'Insertion Sort',
+    run: insertionSort,
+    codeLines: insertionTeachSource,
+    lineMap: insertionLineMap,
+  },
+};
+
+// Selected algorithm (default bubble)
+let currentAlgo = ALGOS.bubble;
 
 // Render code lines into #codePane as <div class="code-line" data-line="n">
 function renderCodePane(lines) {
@@ -132,13 +161,16 @@ function highlightLine(lineNum) {
   els.codePane.scrollTop += offset;
 }
 
-// If events don't carry payload.line, fall back to this mapping
-const typeToLineFallback = {
-  init: 2,
-  compare: 8,
-  swap: 9,
-  markSortedEnd: 13,
-  done: 15,
+// Simple bar renderer state
+const state = {
+  data: [5, 2, 7, 1, 6, 4, 3], // Initial demo array
+  svg: null,
+  barEls: [],
+  ops: 0,
+  cmps: 0,
+  swps: 0,
+  done: false,
+  sortedMarkers: new Set(), // indices confirmed sorted
 };
 
 // Create an SVG inside the canvas and draw the bars once
@@ -249,15 +281,9 @@ function updateBar(i, newVal) {
 }
 */
 
-function highlightPair(i, j, cls) {
-  clearHighlights();
-  state.barEls[i]?.classList.add(cls);
-  state.barEls[j]?.classList.add(cls);
-}
-
 function clearHighlights() {
   for (const r of state.barEls) {
-    r.classList.remove('bar-compare', 'bar-swap', 'bar-done', 'bar-sorted');
+    r.classList.remove('bar-compare', 'bar-swap', 'bar-shift', 'bar-insert', 'bar-done', 'bar-sorted');
   }
 
   // Re-apply sorted markers after clearning (they persist across steps)
@@ -269,11 +295,17 @@ function clearHighlights() {
   }
 }
 
-// Draw function: consume events and update the SVG/metrics
+function highlightPair(i, j, cls) {
+  clearHighlights();
+  state.barEls[i]?.classList.add(cls);
+  state.barEls[j]?.classList.add(cls);
+}
+
+// Draw function: uses currentAlgo's line mapping and events
 function draw(events) {
   for (const ev of events) {
     // Prefer payload.line; otherwise fallback by type
-    const lineHint = ev?.payload?.line ?? typeToLineFallback[ev.type];
+    const lineHint = ev?.payload?.line ?? currentAlgo.lineMap[ev.type];
     if (lineHint) highlightLine(lineHint);
 
     switch (ev.type) {
@@ -288,10 +320,14 @@ function draw(events) {
       case 'compare': {
         state.cmps++;
         els.cmps.textContent = String(state.cmps);
-        highlightPair(ev.payload.i, ev.payload.j, 'bar-compare');
+        // For insertion, may only have one "key" vs a[j]; use pair if present
+        const { i, j } = ev.payload;
+        if (Number.isInteger(i) && Number.isInteger(j)) {
+          highlightPair(i, j, 'bar-compare');
+        }
         break;
       }
-      case 'swap': {
+      case 'swap': { // bubble
         state.swps++;
         els.swps.textContent = String(state.swps);
         const { i, j, a} = ev.payload;
@@ -301,14 +337,35 @@ function draw(events) {
         highlightPair(i, j, 'bar-swap');
         break;
       }
-      case 'clear': {
-        clearHighlights();
+      case 'shift': { // insertion
+        const { from, to, a } = ev.payload;
+        updateBar(to, a[to]);
+        // highlight the moved pair (from -> to)
+        if (Number.isInteger(from) && Number.isInteger(to)) {
+          highlightPair(from, to, 'bar-shift');
+        }
         break;
       }
-      case 'markSortedEnd': {
+      case 'insert': {
+        const { index, value, a } = ev.payload;
+        updateBar(index, value);
+        state.barEls[index]?.classList.add('bar-insert');
+        break;
+      }
+      case 'markSortedEnd': { // bubble
         // Persist a visual marker at the index that bubbled to the end
         state.sortedMarkers.add(ev.payload.index);
         clearHighlights(); // re-applies sorted markers
+        break;
+      }
+      case 'markSortedPrefix': { // insertion
+        state.sortedMarkers.clear();
+        for (let k = 0; k <= ev.payload.upTo; k++) state.sortedMarkers.add(k);
+        clearHighlights();
+        break;
+      }
+      case 'clear': {
+        clearHighlights();
         break;
       }
       case 'done': {
@@ -330,12 +387,17 @@ function draw(events) {
 let animator;
 let timeline;
 
-function buildFromBubbleSort() {
+function buildFromCurrentAlgo() {
   // Reset live metrics
   state.ops = state.cmps = state.swps = 0;
   els.ops.textContent = els.cmps.textContent = els.swps.textContent = '0';
 
-  const events = bubbleSort(state.data);
+  // Render correct code pane
+  renderCodePane(currentAlgo.codeLines);
+  // Prime highlight to the init line
+  highlightLine(2);
+
+  const events = currentAlgo.run(state.data);
   timeline = new Timeline(events);
   animator.setTimeline(timeline);
   // Reset & render tick 0
@@ -345,22 +407,20 @@ function buildFromBubbleSort() {
 function randomizeData() {
   const n = 8 + Math.floor(Math.random() * 8); // 8...15 items
   state.data = Array.from({ length: n}, () => 1 + Math.floor(Math.random() * 20));
-  buildFromBubbleSort();
-  announce('Randomized dataset');
+  buildFromCurrentAlgo();
 }
 
 // Initialize once DOM is ready
 window.addEventListener('DOMContentLoaded', () => {
-  // 1) Render the code pane once on load
-  renderCodePane(bubbleTeachSource);
-
-  // Prime the highlight at line 2 (copy input) to match 'init'
-  highlightLine(2);
-
-  // 2) Boot animator pipeline
-  animator = new Animator({ draw });
+  animator = new Animator ({ draw }); 
   initSVG();
-  buildFromBubbleSort();
+  buildFromCurrentAlgo();
+});
+// Switch algorithms on change
+els.algoSelect?.addEventListener('change', (e) => {
+  const v = e.target.value;
+  currentAlgo = ALGOS[v] || ALGOS.bubble;
+  buildFromCurrentAlgo();
 });
 
 // Control wiring
@@ -383,17 +443,13 @@ els.reset.addEventListener('click', () => {
   animator.reset();
   clearHighlights();
   highlightLine(2);
-  announce('Reset to start.');
 });
 
 els.speed.addEventListener('input', (e) => {
   animator.setSpeed(e.target.value);
-  announce(`Speed ${e.target.value}x`);
 });
 
 els.randomize.addEventListener('click', () => {
   randomizeData();
   els.play.textContent = 'Play'; // ensure label resets
-  // Re-sync code pane to init line
-  highlightLine(2);
 });

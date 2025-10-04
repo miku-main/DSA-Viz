@@ -391,10 +391,9 @@ function draw(events) {
         // keep subrange shading if it was present; clear transient compare/swap
         break;
       }
-      case 'swap': { // bubble
+      case 'swap': {
         state.writes !== undefined && currentAlgo.id === 'bubble' && (state.writes++, els.m3?.textContent = String(state.writes));
-        const { i, j, a} = ev.payload;
-        // Update both bars to new values
+        const { i, j, a } = ev.payload;
         updateBar(i, a[i]); updateBar(j, a[j]);
         highlightPair(i, j, 'bar-swap');
         break;

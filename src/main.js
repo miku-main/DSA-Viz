@@ -28,6 +28,7 @@ import { Animator } from './core/animator.js';
 import { Timeline } from './core/timeline.js';
 import { bubbleSort } from './algos/sorting/bubble.js';
 import { insertionSort } from './algos/sorting/insertion.js';
+import { mergeSort } from './algos/sorting/mergesort.js';
 
 // Query a helper to avoid repetition
 const $ = (sel) => document.querySelector(sel);
@@ -91,8 +92,40 @@ const insertionTeachSource = [
   '}',                                                        // 14
 ];
 
+// teach-mode code for merge sort (what learners expect to see)
+const mergeTeachSource = [
+  'function mergeSort(arr) {',                  // 1
+  '  const a = arr.slice();',                   // 2
+  '  const temp = Array(a.length);',            // 3
+  '  function merge(l, m, r) {',                // 4
+  '    let i = l, j = m + 1, k = l;',           // 5
+  '    for (let p = l; p <= r; p++) temp[p] = a[p];', // 6
+  '    while (i <= m && j <= r) {',             // 7
+  '      if (temp[i] <= temp[j]) a[k++] = temp[i++];', // 8
+  '      else a[k++] = temp[j++];',             // 9
+  '    }',                                      // 10
+  '    while (i <= m) a[k++] = temp[i++];',     // 11
+  '    while (j <= r) a[k++] = temp[j++];',     // 12
+  '  }',                                        // 13
+  '  function sort(l, r) {',                    // 14
+  '    if (l >= r) return;',                    // 15
+  '    const m = Math.floor((l + r) / 2);',     // 16
+  '    sort(l, m); sort(m + 1, r); merge(l, m, r);', // 17
+  '  }',                                        // 18
+  '  sort(0, a.length - 1);',                   // 19
+  '  return a;',                                // 20
+  '}',                                          // 21
+];
+
+
 // Fallback type -> line maps (used if an event lacks payload.line)
-const bubbleLineMap = { init: 2, compare: 8, swap: 9, markSortedEnd: 13, done: 15 };
+const bubbleLineMap = { 
+  init: 2, 
+  compare: 8, 
+  swap: 9, 
+  markSortedEnd: 13, 
+  done: 15 
+};
 const insertionLineMap = {
   init: 2,
   compare: 6,   // compare key with a[j]
@@ -101,6 +134,14 @@ const insertionLineMap = {
   markSortedPrefix: 11,
   clear: 0,
   done: 13,
+};
+const mergeLineMap = {
+  init: 2,
+  markSubarray: 14, // entering recursion
+  compare: 8, // inside merge test
+  overwrite: 8, // writing merged value
+  clear: 0,
+  done: 20,
 };
 
 // Algorithm registry
@@ -118,6 +159,13 @@ const ALGOS = {
     run: insertionSort,
     codeLines: insertionTeachSource,
     lineMap: insertionLineMap,
+  },
+  merge: {
+    id: 'merge',
+    name: 'Merge Sort',
+    run: mergeSort,
+    codeLines: mergeTeachSource,
+    lineMap: mergeLineMap,
   },
 };
 
@@ -317,23 +365,37 @@ function draw(events) {
         initSVG();
         break;
       }
+      case 'markSubarray': { // NEW
+        clearHighlights();
+        const { l, r } = ev.payload;
+        for (let idx = l; idx <= r; idx++) {
+          state.barEls[idx]?.classList.add('bar-subrange');
+        }
+        break;
+      }
       case 'compare': {
         state.cmps++;
         els.cmps.textContent = String(state.cmps);
         // For insertion, may only have one "key" vs a[j]; use pair if present
-        const { i, j } = ev.payload;
+        const { i, j } = ev.payload || {};
         if (Number.isInteger(i) && Number.isInteger(j)) {
           highlightPair(i, j, 'bar-compare');
         }
         break;
       }
+      case 'overwrite': { // NEW
+        // write a value back into a[k]
+        const { k, value, a } = ev.payload;
+        updateBar(k, value);
+        state.barEls[k]?.classList.add('bar-overwrite');
+        // keep subrange shading if it was present; clear transient compare/swap
+        break;
+      }
       case 'swap': { // bubble
-        state.swps++;
-        els.swps.textContent = String(state.swps);
+        state.writes !== undefined && currentAlgo.id === 'bubble' && (state.writes++, els.m3?.textContent = String(state.writes));
         const { i, j, a} = ev.payload;
         // Update both bars to new values
-        updateBar(i, a[i]);
-        updateBar(j, a[j]);
+        updateBar(i, a[i]); updateBar(j, a[j]);
         highlightPair(i, j, 'bar-swap');
         break;
       }
@@ -365,7 +427,11 @@ function draw(events) {
         break;
       }
       case 'clear': {
+        // Clear transient highlights, but keep subrange shading (reapply)
+        const shaded = [...document.querySelectorAll('.bar-subrange')].map(el => Number(el.dataset.index));
         clearHighlights();
+        // re-apply subrange if we just cleared it
+        for (const idx of shaded) state.barEls[idx]?.classList.add('bar-subrange');
         break;
       }
       case 'done': {

@@ -219,6 +219,19 @@ button:disabled, select:disabled, input:disabled {
   fill: #22c55e; /* pop when key is inserted */
 }
 
+/* Merge sort visuals */
+.bar-subrange {         /* active [L..R] segment being processed */
+  fill: #334155;
+  opacity: 0.9;
+  stroke: #475569;
+  stroke-width: 1;
+}
+.bar-overwrite {        /* when we write a value back to a[k] */
+  filter: brightness(1.2);
+  transform: scaleY(1.02);
+  transition: transform .08s linear, filter .08s linear;
+}
+
 /* Code Pane Highlighting */
 .code {
   counter-reset: codeLine;

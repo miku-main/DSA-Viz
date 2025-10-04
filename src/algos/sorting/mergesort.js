@@ -26,7 +26,7 @@ export function mergeSort(arr) {
     // ...
     // 17: return a;
 
-    events.push({ t: t++, type: 'init', payload: {a: a.slice(), line: 2 } });
+    events.push({ t: t++, type: 'init', payload: { a: a.slice(), line: 2 } });
 
     const temp = Array(a.length); // line 3
 

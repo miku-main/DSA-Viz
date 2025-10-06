@@ -331,7 +331,16 @@ function updateBar(i, newVal) {
 
 function clearHighlights() {
   for (const r of state.barEls) {
-    r.classList.remove('bar-compare', 'bar-swap', 'bar-shift', 'bar-insert', 'bar-done', 'bar-sorted');
+    r.classList.remove(
+      'bar-compare', 
+      'bar-swap', 
+      'bar-shift', 
+      'bar-insert', 
+      'bar-done', 
+      'bar-sorted',
+      'bar-overwrite',
+      'bar-subrange',
+    );
   }
 
   // Re-apply sorted markers after clearning (they persist across steps)
@@ -392,9 +401,9 @@ function draw(events) {
         break;
       }
       case 'swap': {
-        state.writes !== undefined && currentAlgo.id === 'bubble' && (state.writes++, els.m3?.textContent = String(state.writes));
         const { i, j, a } = ev.payload;
-        updateBar(i, a[i]); updateBar(j, a[j]);
+        updateBar(i, a[i]);
+        updateBar(j, a[j]);
         highlightPair(i, j, 'bar-swap');
         break;
       }
@@ -436,6 +445,12 @@ function draw(events) {
       case 'done': {
         state.done = true;
         clearHighlights(); // applies bar-done style to all bars
+        // Mark all as sorted so they turn green like other algos at completion
+        state.sortedMarkers.clear();
+        for (let k = 0; k < state.barEls.length; k++) {
+          state.sortedMarkers.add(k);
+        }
+        clearHighlights(); // re-applies bar-sorted + bar-done
         break;
       }
       default:

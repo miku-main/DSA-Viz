@@ -55,6 +55,29 @@ const els = {
   (el) => el && (el.disabled = false)
 );
 
+// theme persistence
+const THEME_KEY = 'algoviz:theme';
+function applyTheme(theme) {
+  document.body.setAttribute('data-theme', theme);
+  localStorage.setItem(THEME_KEY, theme);
+}
+
+function initTheme() {
+  const saved = localStorage.getItem(THEME_KEY);
+  // Respect user OS perference if nothing saved yet
+  const prefersLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
+  applyTheme(saved || (prefersLight ? 'light' : 'dark'));
+}
+
+// Small debounce utility for resize stability
+function debounce(fn, wait = 120) {
+  let t;
+  return (...args) => {
+    clearTimeout(t);
+    t = setTimeout(() => fn(...args), wait);
+  };
+}
+
 // CODE PANE (Teach-mode Bubble Sort)
 // Display-only source (what learners expect)
 const bubbleTeachSource = [
@@ -255,6 +278,7 @@ const state = {
   swps: 0,
   done: false,
   sortedMarkers: new Set(), // indices confirmed sorted
+  currentRange: null, // {l, r} for merge/quick
 };
 
 // Create an SVG inside the canvas and draw the bars once
@@ -383,6 +407,11 @@ function clearHighlights() {
   for (const idx of state.sortedMarkers) {
     state.barEls[idx]?.classList.add('bar-sorted');
   }
+ // Re-apply current subrange focus (merge/quick)
+  if (state.currentRange) {
+    const { l, r } = state.currentRange;
+    for (let i = l; i <= r; i++) state.barEls[i]?.classList.add('bar-subrange');
+  }
   if (state.done) {
     for (const r of state.barEls) r.classList.add('bar-done');
   }
@@ -413,6 +442,7 @@ function draw(events) {
       case 'markSubarray': { // NEW
         clearHighlights();
         const { l, r } = ev.payload;
+        state.currentRange = { l, r };
         for (let idx = l; idx <= r; idx++) {
           state.barEls[idx]?.classList.add('bar-subrange');
         }
@@ -426,6 +456,8 @@ function draw(events) {
         break;
       }
       case 'compareWithPivot': {
+        state.cmps++;
+        els.cmps.textContent = String(state.cmps);
         const { j, p } = ev.payload;
         clearHighlights(); // clear transient classes
         // Re-apply pivot and subrange shading (keep focus)
@@ -547,6 +579,14 @@ function randomizeData() {
   buildFromCurrentAlgo();
 }
 
+// Init theme on load
+initTheme();
+
+els.themeToggle?.addEventListener('click', () => {
+  const next = document.body.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+  applyTheme(next);
+});
+
 // Initialize once DOM is ready
 window.addEventListener('DOMContentLoaded', () => {
   animator = new Animator ({ draw }); 
@@ -561,14 +601,31 @@ els.algoSelect?.addEventListener('change', (e) => {
   buildFromCurrentAlgo();
 });
 
+// Rebuild layout on window resize (debounced) while preserving data & frame
+const onResize = debounce(() => {
+  // Recreate the SVG bars with current values
+  const current = [...state.data];
+  initSVG();
+  // Re-apply current values (ensures labels/positions match new size)
+  for (let i = 0; i < current.length; i++) {
+    updateBar(i, current[i]);
+  }
+  // Re-apply persistent highlights (sorted markers, subrange, done tint)
+  clearHighlights();
+}, 160);
+
+window.addEventListener('resize', onResize);
+
 // Control wiring
 els.play.addEventListener('click', () => {
   if (animator.playing) {
     animator.pause();
     els.play.textContent = 'Play';
+    els.play.setAttribute('aria-pressed', 'false');
   } else {
     animator.play();
     els.play.textContent = 'Pause';
+    els.play.setAttribute('aria-pressed', 'true');
   }
 });
 
@@ -590,4 +647,30 @@ els.speed.addEventListener('input', (e) => {
 els.randomize.addEventListener('click', () => {
   randomizeData();
   els.play.textContent = 'Play'; // ensure label resets
+});
+
+document.addEventListener('keydown', (e) => {
+  const activeTag = document.activeElement?.tagName;
+  // Avoid interfering with typing in inputs/selects
+  if (activeTag === 'INPUT' || activeTag === 'SELECT' || activeTag === 'TEXTAREA') return;
+
+  if (e.code === 'Space') {
+    e.preventDefault();
+    els.play.click();
+  } else if (e.code === 'ArrowRight') {
+    e.preventDefault();
+    els.step.click();
+  } else if (e.key.toLowerCase() === 'r') {
+    e.preventDefault();
+    els.randomize.click()
+  } else if (/^[1-9]$/.test(e.key)) {
+    // Map 1...9 to options in the algo select, if present
+    const idx = Number(e.key) - 1;
+    const opt = els.algoSelect?.options?.[idx];
+    if (opt) {
+      els.algoSelect.value = opt.value;
+      const ev = new Event('change');
+      els.algoSelect.dispatchEvent(ev);
+    }
+  }
 });

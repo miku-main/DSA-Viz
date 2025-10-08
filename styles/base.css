@@ -279,3 +279,47 @@ button:disabled, select:disabled, input:disabled {
 #codePane {
   scroll-behavior: smooth;
 }
+
+/* Light theme (toggled via body[data-theme="light"]) */
+body[data-theme="light"] {
+  --bg: #f8fafc;
+  --panel: #ffffff;
+  --surface: #f1f5f9;
+  --text: #0f172a;
+  --muted: #334155;
+  --border: #e2e8f0;
+  --accent: #0ea5e9;
+  --focus: #2563eb;
+}
+
+/* Optional but adding: tweak bar contrast on light theme */
+body[data-theme="light"] .bar {
+  fill: #94a3b8;
+  stroke: #cbd5e1;
+}
+
+/* Respect prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+ * {
+  animation-duration: 0.001s !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001s !important;
+  scroll-behavior: auto !important;
+ }
+ /* Remove pop/scale effects if motion is reduced */
+ .bar-overwrite {
+  transform: none !important;
+  filter: none !important;
+ }
+}
+
+/* Readable text selection */
+::selection {
+  background: rgba(56, 189, 248, 0.35);
+}
+
+/* Slight hover lift for interactive controls */
+button:hover, select:hover, input[type="range"]:hover {
+  border-color: var(--accent);
+  filter: brightness(1.06);
+}

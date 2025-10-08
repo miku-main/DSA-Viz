@@ -10,6 +10,7 @@
   -->
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-schema" content="dark light" />
   <title>AlgoViz — Visualize Algorithms in the Browser</title>
 
   <link rel="stylesheet" href="styles/base.css" />
@@ -45,7 +46,7 @@
       </optgroup>
     </select>
 
-    <button id="themeToggle" class="icon-btn" aria-label="Toggle theme" title="Toggle theme" disabled>
+    <button id="themeToggle" class="icon-btn" aria-label="Toggle theme" title="Toggle theme">
       🌓
     </button>
   </header>
@@ -109,7 +110,7 @@
   -->
   <footer class="controls" role="contentinfo">
     <div class="controls-left">
-      <button id="play" class="btn" disabled>Play</button>
+      <button id="play" class="btn" aria-pressed="false">Play</button>
       <button id="step" class="btn" disabled>Step</button>
       <button id="reset" class="btn btn-secondary" disabled>Reset</button>
     </div>

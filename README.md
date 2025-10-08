@@ -1,1 +1,1 @@
-# DSA Viz
+# AlgoViz — Visualgo-style DSA visualizer (HTML/CSS/JS)

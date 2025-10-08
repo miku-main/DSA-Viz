@@ -81,6 +81,6 @@ export function quickSort(arr) {
 
     qs(0, a.length - 1);
 
-    events.push({ t: t++, type: 'done', payload: { line: 13 } });
+    events.push({ t: t++, type: 'done', payload: { line: 14 } });
     return events;
 }

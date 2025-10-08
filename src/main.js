@@ -29,6 +29,7 @@ import { Timeline } from './core/timeline.js';
 import { bubbleSort } from './algos/sorting/bubble.js';
 import { insertionSort } from './algos/sorting/insertion.js';
 import { mergeSort } from './algos/sorting/mergesort.js';
+import { quickSort } from './algos/sorting/quicksort.js';
 
 // Query a helper to avoid repetition
 const $ = (sel) => document.querySelector(sel);
@@ -117,6 +118,24 @@ const mergeTeachSource = [
   '}',                                          // 21
 ];
 
+// teach-mode quick sort source (what learners recognize)
+const quickTeachSource = [
+  'function quickSort(arr) {',                          // 1
+  '  const a = arr.slice();',                           // 2
+  '  function partition(low, high) {',                  // 3
+  '    const p = a[high];',                             // 4
+  '    let i = low;',                                   // 5
+  '    for (let j = low; j < high; j++) {',             // 6
+  '      if (a[j] <= p) {',                             // 7
+  '        [a[i], a[j]] = [a[j], a[i]]; i++;',          // 8
+  '      }',                                            // 9
+  '    }',                                              //10
+  '    [a[i], a[high]] = [a[high], a[i]]; return i;',   //11
+  '  }',                                                //12
+  '  // recursive qs(low, high) calls omitted for brevity', // 13
+  '  return a;',                                        //14
+  '}',                                                  //15
+];
 
 // Fallback type -> line maps (used if an event lacks payload.line)
 const bubbleLineMap = { 
@@ -143,6 +162,16 @@ const mergeLineMap = {
   clear: 0,
   done: 20,
 };
+const quickLineMap = {
+  init: 2,
+  markSubarray: 3,  // or 5 when recursing
+  setPivot: 4,
+  compareWithPivot: 7,
+  swap: 8,  // also 11 for final pivot swap
+  markSortedIndex: 11,
+  clear: 0,
+  done: 14,
+};
 
 // Algorithm registry
 const ALGOS = {
@@ -166,6 +195,13 @@ const ALGOS = {
     run: mergeSort,
     codeLines: mergeTeachSource,
     lineMap: mergeLineMap,
+  },
+  quick: {
+    id: 'quick',
+    name: 'Quick Sort',
+    run: quickSort,
+    codeLines: quickTeachSource,
+    lineMap: quickLineMap,
   },
 };
 
@@ -382,6 +418,22 @@ function draw(events) {
         }
         break;
       }
+      case 'setPivot': {
+        // Persist pivot highlight until cleared/recomputed
+        const { p } = ev.payload;
+        clearHighlights(); // this optional: keeps UI focused
+        state.barEls[p]?.classList.add('bar-pivot');
+        break;
+      }
+      case 'compareWithPivot': {
+        const { j, p } = ev.payload;
+        clearHighlights(); // clear transient classes
+        // Re-apply pivot and subrange shading (keep focus)
+        state.barEls[p]?.classList.add('bar-pivot');
+        // compare current j with pivot
+        highlightPair(j, p, 'bar-compare');
+        break;
+      }
       case 'compare': {
         state.cmps++;
         els.cmps.textContent = String(state.cmps);
@@ -432,6 +484,12 @@ function draw(events) {
         state.sortedMarkers.clear();
         for (let k = 0; k <= ev.payload.upTo; k++) state.sortedMarkers.add(k);
         clearHighlights();
+        break;
+      }
+      case 'markSortedIndex': {
+        // Pivot placed at final position; keep it green forever
+        state.sortedMarkers.add(ev.payload.index);
+        clearHighlights(); // re-applies .bar-sorted
         break;
       }
       case 'clear': {

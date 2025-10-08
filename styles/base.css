@@ -226,10 +226,18 @@ button:disabled, select:disabled, input:disabled {
   stroke: #475569;
   stroke-width: 1;
 }
+
 .bar-overwrite {        /* when we write a value back to a[k] */
   filter: brightness(1.2);
   transform: scaleY(1.02);
   transition: transform .08s linear, filter .08s linear;
+}
+
+/* Quick sort visuals */
+.bar-pivot {  /* highlight the current pivot */
+  stroke: #38bdf8;
+  stroke-width: 2;
+  filter: brightness(1.15);
 }
 
 /* Code Pane Highlighting */

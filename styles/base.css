@@ -350,3 +350,14 @@ button:hover, select:hover, input[type="range"]:hover {
   border-radius: 8px;
   padding: 6px 10px;
 }
+
+/* Queue visuals */
+.bar-enqueue {  /* newly appended item at rear */
+  fill: #22c55e;
+  filter: brightness(1.15);
+}
+
+.bar-dequeue {  /* front after a removal (orientation cue) */
+  fill: #f59e0b;
+  filter: brightness(1.1);
+}

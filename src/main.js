@@ -31,6 +31,8 @@ import { insertionSort } from './algos/sorting/insertion.js';
 import { mergeSort } from './algos/sorting/mergesort.js';
 import { quickSort } from './algos/sorting/quicksort.js';
 import { stackInit, stackOp } from './algos/stack.js';
+import { queueInit, queueOp } from './algos/queue.js';
+import { error } from 'console';
 
 // Query a helper to avoid repetition
 const $ = (sel) => document.querySelector(sel);
@@ -244,6 +246,21 @@ const ALGOS = {
     lineMap: { init: 2, push: 3, pop: 4, clear: 0, error: 0 },
     type: 'ds',
   },
+  queue: {
+    id: 'queue',
+    name: 'Queue',
+    run: (arr) => queueInit(arr), // initial snapshot
+    codeLines: [
+      'class Queue {',
+      '  constructor() { this.a = []; }',
+      '  enqueue(x) { this.a.push(x); }    // rear = end',
+      '  dequeue()  { return this.a.shift(); } // front = index 0',
+      '}',
+      '//visualize FRONT at index 0, REAR at the end.',
+    ],
+    lineMap: { init: 2, enqueue: 3, dequeue: 4, clear: 0, error: 0 },
+    type: 'ds',
+  },
 };
 
 // Selected algorithm (default bubble)
@@ -422,43 +439,68 @@ function ensureDSControls() {
   input.type = 'number';
   input.placeholder = 'Value';
   input.className = 'ds-input';
-  input.setAttribute('aria-label', 'Value to push');
+  input.setAttribute('aria-label', 'Value input');
 
-  // Push button
-  const pushBtn = document.createElement('button');
-  pushBtn.className = 'btn';
-  pushBtn.textContent = 'Push';
+  const primaryBtn = document.createElement('button');
+  primaryBtn.className = 'btn';
 
-  // Pop button
-  const popBtn = document.createElement('button');
-  popBtn.className = 'btn';
-  popBtn.textContent = 'Pop';
+  const secondaryBtn = document.createElement('button');
+  secondaryBtn.className = 'btn';
 
-  // Wire events: each click generates a tiny timeline and plays it
-  pushBtn.addEventListener('click', () => {
-    const evts = stackOp(state.data, 'push', Number(input.value));
-    playOpEvents(evts);
+  // handler factory that dispatches to the right DS + action
+  function runAction(kind) {
+    // choose implementation per selected DS
+    if (currentAlgo.id === 'stack') {
+      if (kind === 'primary') {
+        const evts = window.stackOp
+          ? stackOp(state.data, 'push', Number(input.value))
+          : []; // fallback if not imported
+        playOpEvents(evts);
+      } else {
+        const evts = stackOp(state.data, 'pop');
+        playOpEvents(evts);
+      }
+    } else if (currentAlgo.id === 'queue') {
+      if (kind === 'primary') {
+        const evts = queueOp(state.data, 'enqueue', Number(input.value));
+        playOpEvents(evts);
+      } else {
+        const evts = queueOp(state.data, 'dequeue');
+        playOpEvents(evts);
+      }
+    }
     input.value = '';
     input.focus();
-  });
+  }
 
-  popBtn.addEventListener('click', () => {
-    const evts = stackOp(state.data, 'pop');
-    playOpEvents(evts);
-    input.focus();
-  });
+  primaryBtn.addEventListener('click', () => runAction('primary'));
+  secondaryBtn.addEventListener('click', () => runAction('secondary'));
 
-  wrap.append(input, pushBtn, popBtn);
+  wrap.append(input, primaryBtn, secondaryBtn);
   footer.appendChild(wrap);
-  dsControls = wrap;
-  return wrap;
+  dsControls = { wrap, input, primaryBtn, secondaryBtn };
+  return dsControls;
 }
 
 function removeDSControls() {
-  if (dsControls && dsControls.parentNode) {
-    dsControls.parentNode.removeChild(dsControls);
-  }
+  if (dsControls?.wrap?.parentNode) dsControls.wrap.parentNode.removeChild(dsControls.wrap);
   dsControls = null;
+}
+
+// Update labels per DS when building
+function configureDSControlsForCurrent() {
+  if (!dsControls) return;
+  if (currentAlgo.id === 'stack') {
+    dsControls.primaryBtn.textContent = 'Push';
+    dsControls.secondaryBtn.textContent = 'Pop';
+    dsControls.input.placeholder = 'Value';
+    dsControls.input.disabled = false;
+  } else if (currentAlgo.id === 'queue') {
+    dsControls.primaryBtn.textContent = 'Enqueue';
+    dsControls.secondaryBtn.textContent = 'Dequeue';
+    dsControls.input.placeholder = 'Value';
+    dsControls.input.disabled = false;
+  }
 }
 
 // Helper to run a small event list through the animator
@@ -648,6 +690,22 @@ function draw(events) {
         }
         break;
       }
+      case 'enqueue': {
+        const { index, value, a } = ev.payload;
+        state.data = a.slice();
+        initSVG(); // length may have changed
+        state.barEls[index]?.classList.add('bar-enqueue'); // flash new rear
+        break;
+      }
+      case 'dequeue': {
+        const{ from, value, a } = ev.payload;
+        // from is 0, but treat it like "the position that left"
+        state.data = a.slice();
+        initSVG(); // items shifted left
+        // Highlight the new front briefly for orientation
+        if (state.barEls.length > 0) state.barEls[0]?.classList.add('bar-dequeue');
+        break;
+      }
       case 'error': {
         announce(ev.payload.message || 'Error');
         break;
@@ -676,8 +734,12 @@ function buildFromCurrentAlgo() {
   highlightLine(2);
 
   // Show DS controls for stack; hide otherwise
-  if (currentAlgo.type === 'ds') ensureDSControls();
-  else removeDSControls();
+  if (currentAlgo.type === 'ds') {
+    ensureDSControls();
+    configureDSControlsForCurrent();
+  } else {
+    removeDSControls();
+  }
 
   const events = currentAlgo.run(state.data);
   timeline = new Timeline(events);

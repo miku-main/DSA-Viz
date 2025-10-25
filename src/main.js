@@ -30,6 +30,7 @@ import { bubbleSort } from './algos/sorting/bubble.js';
 import { insertionSort } from './algos/sorting/insertion.js';
 import { mergeSort } from './algos/sorting/mergesort.js';
 import { quickSort } from './algos/sorting/quicksort.js';
+import { stackInit, stackOp } from './stack.js';
 
 // Query a helper to avoid repetition
 const $ = (sel) => document.querySelector(sel);
@@ -226,6 +227,23 @@ const ALGOS = {
     codeLines: quickTeachSource,
     lineMap: quickLineMap,
   },
+  stack: {
+    id: 'stack',
+    name: 'Stack',
+    // For stack it will manage events per user action; the initial build uses stackInit.
+    run: (arr) => stackInit(arr),
+    codeLines: [
+      'class Stack {',
+      '  constructor() { this.a = []; }',
+      '  push(x) { this.a.push(x); }',
+      '  pop()  { return this.a.pop(); }',
+      '  peek() { return this.a[this.a.length-1]; }',
+      '}',
+      '// We visualize top of stack at the RIGHT end of the array.',
+    ],
+    lineMap: { init: 2, push: 3, pop: 4, clear: 0, error: 0 },
+    type: 'ds',
+  },
 };
 
 // Selected algorithm (default bubble)
@@ -389,6 +407,74 @@ function updateBar(i, newVal) {
 }
 */
 
+let dsControls = null;
+
+function ensureDSControls() {
+  if (dsControls) return dsControls;
+  const footer = document.querySelector('.controls');
+  if (!footer) return null;
+
+  const wrap = document.createElement('div');
+  wrap.className = 'ds-controls'; // styled in CSS
+
+  // Input for push value
+  const input = document.createElement('input');
+  input.type = 'number';
+  input.placeholder = 'Value';
+  input.className = 'ds-input';
+  input.setAttribute('aria-label', 'Value to push');
+
+  // Push button
+  const pushBtn = document.createElement('button');
+  pushBtn.className = 'btn';
+  pushBtn.textContent = 'Push';
+
+  // Pop button
+  const popBtn = document.createElement('button');
+  popBtn.className = 'btn';
+  popBtn.textContent = 'Pop';
+
+  // Wire events: each click generates a tiny timeline and plays it
+  pushBtn.addEventListener('click', () => {
+    const evts = stackOp(state.data, 'push', Number(input.value));
+    playOpEvents(evts);
+    input.value = '';
+    input.focus();
+  });
+
+  popBtn.addEventListener('click', () => {
+    const evts = stackOp(state.data, 'pop');
+    playOpEvents(evts);
+    input.focus();
+  });
+
+  wrap.append(input, pushBtn, popBtn);
+  footer.appendChild(wrap);
+  dsControls = wrap;
+  return wrap;
+}
+
+function removeDSControls() {
+  if (dsControls && dsControls.parentNode) {
+    dsControls.parentNode.removeChild(dsControls);
+  }
+  dsControls = null;
+}
+
+// Helper to run a small event list through the animator
+function playOpEvents(events) {
+  // Error events: show toast/announcer and bail
+  if (events.length === 1 && events[0].type === 'error') {
+    announce(events[0].payload.message);
+    return;
+  }
+  timeline = new Timeline(events);
+  animator.setTimeline(timeline);
+  animator.reset(); // renders the first tick (e.g., push/pop)
+  animator.play(); // short auto-play feels good for micro-interaction
+  setTimeout(() => animator.pause(), 240); // stop quickly
+}
+
 function clearHighlights() {
   for (const r of state.barEls) {
     r.classList.remove(
@@ -543,6 +629,29 @@ function draw(events) {
         clearHighlights(); // re-applies bar-sorted + bar-done
         break;
       }
+      case 'push': {
+        // Update data, rebuild SVG to reflect new length, and highlight the new top
+        const { index, value, a } = ev.payload;
+        state.data = a.slice();
+        initSVG();
+        state.barEls[index]?.classList.add('bar-push');
+        break;
+      }
+      case 'pop': {
+        // Rebuild with the shorter array and briefly mark the former top
+        const { index, value, a} = ev.payload;
+        state.data = a.slice();
+        initSVG();
+        // If the array shrank, index might be out of range now-safe check
+        if (index < state.barEls.length) {
+          state.barEls[index]?.classList.add('bar-pop');
+        }
+        break;
+      }
+      case 'error': {
+        announce(ev.payload.message || 'Error');
+        break;
+      }
       default:
         break;
     }
@@ -565,6 +674,10 @@ function buildFromCurrentAlgo() {
   renderCodePane(currentAlgo.codeLines);
   // Prime highlight to the init line
   highlightLine(2);
+
+  // Show DS controls for stack; hide otherwise
+  if (currentAlgo.type === 'ds') ensureDSControls();
+  else removeDSControls();
 
   const events = currentAlgo.run(state.data);
   timeline = new Timeline(events);

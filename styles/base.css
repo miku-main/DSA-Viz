@@ -323,3 +323,30 @@ button:hover, select:hover, input[type="range"]:hover {
   border-color: var(--accent);
   filter: brightness(1.06);
 }
+
+/* Stack visuals */
+.bar-push {
+  fill: #22c55e;  /* green pop when a value is pushed */
+  filter: brightness(1.15);
+}
+
+.bar-pop {
+  fill: #ef4444;  /* red flash for a popped slot (brief) */
+  filter: brightness(1.1);
+}
+
+/* Injected controls for DS */
+.ds-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.ds-input {
+  width: 96px;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 10px;
+}

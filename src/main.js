@@ -30,7 +30,7 @@ import { bubbleSort } from './algos/sorting/bubble.js';
 import { insertionSort } from './algos/sorting/insertion.js';
 import { mergeSort } from './algos/sorting/mergesort.js';
 import { quickSort } from './algos/sorting/quicksort.js';
-import { stackInit, stackOp } from './stack.js';
+import { stackInit, stackOp } from './algos/stack.js';
 
 // Query a helper to avoid repetition
 const $ = (sel) => document.querySelector(sel);

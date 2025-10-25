@@ -32,7 +32,6 @@ import { mergeSort } from './algos/sorting/mergesort.js';
 import { quickSort } from './algos/sorting/quicksort.js';
 import { stackInit, stackOp } from './algos/stack.js';
 import { queueInit, queueOp } from './algos/queue.js';
-import { error } from 'console';
 
 // Query a helper to avoid repetition
 const $ = (sel) => document.querySelector(sel);

@@ -32,6 +32,7 @@ import { mergeSort } from './algos/sorting/mergesort.js';
 import { quickSort } from './algos/sorting/quicksort.js';
 import { stackInit, stackOp } from './algos/stack.js';
 import { queueInit, queueOp } from './algos/queue.js';
+import { bstInit, bstInsertOp, bstSearchOp } from './algos/bst.js';
 
 // Query a helper to avoid repetition
 const $ = (sel) => document.querySelector(sel);
@@ -162,6 +163,23 @@ const quickTeachSource = [
   '}',                                                  //15
 ];
 
+const bstTeachSource = [
+  'function bstInsert(root, key) {',             // 1
+  '  // duplicates go right',                    // 2
+  '  let cur = root, parent = null;',            // 3
+  '  while (cur) {',                             // 4
+  '    parent = cur;',                           // 5
+  '    if (key < cur.key) cur = cur.left;',      // 6
+  '    else if (key > cur.key) cur = cur.right;',// 7
+  '    else cur = cur.right;',                   // 8
+  '  }',                                         // 9
+  '  // attach new node under parent',           //10
+  '}',                                           //11
+  'function bstSearch(root, key) {',             //12
+  '  // returns node or null',                   //13
+  '}',                                           //14
+];
+
 // Fallback type -> line maps (used if an event lacks payload.line)
 const bubbleLineMap = { 
   init: 2, 
@@ -196,6 +214,15 @@ const quickLineMap = {
   markSortedIndex: 11,
   clear: 0,
   done: 14,
+};
+const bstLineMap = {
+  init: 2,
+  setCurrent: 5,
+  compareNode: 6, // also 7/8, but 6 is a good anchor
+  insertNode: 10,
+  found: 13,
+  notFound: 13,
+  clear: 0,
 };
 
 // Algorithm registry
@@ -260,6 +287,14 @@ const ALGOS = {
     lineMap: { init: 2, enqueue: 3, dequeue: 4, clear: 0, error: 0 },
     type: 'ds',
   },
+  bst: {
+    id: 'bst',
+    name: 'Binary Search Tree',
+    run: () => bstInit({ rootId: null, nodes: [] }),
+    codeLines: bstTeachSource,
+    lineMap: bstLineMap,
+    type: 'tree',
+  },
 };
 
 // Selected algorithm (default bubble)
@@ -312,6 +347,8 @@ const state = {
   swps: 0,
   done: false,
   sortedMarkers: new Set(), // indices confirmed sorted
+  tree: { rootId: null, nodes: [] },
+  layout: new Map(), // id -> {x,y}
   currentRange: null, // {l, r} for merge/quick
 };
 
@@ -365,6 +402,118 @@ function initSVG() {
     txt.textContent = String(val);
     svg.appendChild(txt);
   }
+}
+
+// Tree (BST) renderer
+// Create//clear SVG for tree
+function initTreeSVG() {
+  els.canvas.innerHTML = '';
+  const w = els.canvas.clientWidth || 720;
+  const h = Math.max(els.canvas.clientHeight, 420);
+
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('width', '100%');
+  svg.setAttribute('height', '100%');
+  svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+  svg.setAttribute('role', 'img');
+  svg.setAttribute('aria-label', 'Binary Search Tree visualization');
+  els.canvas.appendChild(svg);
+
+  state.avg = svg;
+}
+
+// Simple layered + inorder layout to avoid overlaps
+function computeBSTLayout() {
+  const tree = state.tree;
+  const map = new Map(tree.nodes.map(n => [n.id, n]));
+  const depth = new Map(); // id -> level
+  if (tree.rootId == null) { state.layout = new Map(); return; }
+
+  // BFS for depths
+  const q = [{ id: tree.rootId, d: 0 }];
+  depth.set(tree.rootId, 0);
+  while (q.length) {
+    const { id, d } = q.shift();
+    const n = map.get(id);
+    if (n.left != null) { depth.set(n.left, d + 1); q.push({ id: n.left, d: d + 1}); }
+    if (n.right != null) { depth.set(n.right, d + 1); q.push({ id: n.right, d: d + 1}); }
+  }
+
+  // Inorder indexing for x positions
+  const order = new Map(); let idx = 0;
+  (function inorder(id) {
+    if (id == null) return;
+    const n = map.get(id);
+    inorder(n.left);
+    order.set(id, idx++);
+    inorder(n.right);
+  })(tree.rootId);
+
+  const w = state.svg.viewBox.baseVal.width || els.canvas.clientWidth || 720;
+  const h = state.svg.viewBox.baseVal.height || Math.max(els.canvas.clientHeight, 420);
+  const levels = Math.max(...depth.values(), 0) + 1;
+  const xGap = Math.max(64, w / (tree.nodes.length + 1));
+  const yGap = Math.max(80, h / Math.max(levels, 1));
+
+  const layout = new Map();
+  for (const n of tree.nodes) {
+    const x = 40 + (order.get(n.id) ?? 0) * xGap;
+    const y = 40 + (depth.get(n.id) ?? 0) * yGap;
+    layout.set(n.id, { x, y });
+  }
+  state.layout = layout;
+}
+
+// Redraw the tree (edges first, then nodes)
+function drawBST() {
+  initTreeSVG();
+  computeBSTLayout();
+  const svg = state.svg;
+  const ns = svg.namespaceURI;
+
+  // Edges
+  for (const n of state.tree.nodes) {
+    const p = state.layout.get(n.id);
+    if (!p) continue;
+    for (const childId of [n.left, n.right]) {
+      if (childId == null) continue;
+      const c = state.layout.get(childId);
+      if (!c) continue;
+      const line = document.createElementNS(ns, 'line');
+      line.setAttribute('x1', p.x); line.setAttribute('y1', p.y);
+      line.setAttribute('x2', c.x); line.setAttribute('y2', c.y);
+      line.setAttribute('class', 'edge');
+      svg.appendChild(line);
+    }
+  }
+
+  // Nodes
+  for (const n of state.tree.nodes) {
+    const p = state.layout.get(n.id);
+    if (!p) continue;
+    const g = document.createElementNS(ns, 'g');
+    g.setAttribute('class', 'node');
+    g.dataset.id = String(n.id);
+
+    const circle = document.createElementNS(ns, 'circle');
+    circle.setAttribute('cx', p.x); circle.setAttribute('cy', p.y);
+    circle.setAttribute('r', '18');
+    g.appendChild(circle);
+
+    const label = document.createElementNS(ns, 'text');
+    label.setAttribute('x', p.x); label.setAttribute('y', p.y + 5);
+    label.setAttribute('text-anchor', 'middle');
+    label.setAttribute('class', 'node-label');
+    label.textContent = String(n.key);
+    g.appendChild(label);
+
+    svg.appendChild(g);
+  }
+}
+
+// Helpers to add transient classes to a node group
+function nodeEl(id) {
+  return state.svg?.querySelector(`g.node[data-id="${id}"]`);
 }
 
 // Update two bars' heights after a swap/set
@@ -467,6 +616,16 @@ function ensureDSControls() {
         const evts = queueOp(state.data, 'dequeue');
         playOpEvents(evts);
       }
+    } else if (currentAlgo.id === 'bst') {
+      if (kind === 'primary') {
+        const evts = bstInsertOp(state.tree, Number(dsControls.input.value));
+        playOpEvents(evts);
+      } else {
+        const evts = bstSearchOp(state.tree, Number(dsControls.input.value));
+        playOpEvents(evts);
+      }
+      dsControls.input.value = '';
+      dsControls.input.focus();
     }
     input.value = '';
     input.focus();
@@ -499,8 +658,15 @@ function configureDSControlsForCurrent() {
     dsControls.secondaryBtn.textContent = 'Dequeue';
     dsControls.input.placeholder = 'Value';
     dsControls.input.disabled = false;
+  } else if (currentAlgo.id === 'bst') {
+    dsControls.primaryBtn.textContent = 'Insert';
+    dsControls.secondaryBtn.textContent = 'Search';
+    dsControls.input.placeholder = 'Key';
+    dsControls.input.disabled = false;
   }
 }
+
+
 
 // Helper to run a small event list through the animator
 function playOpEvents(events) {
@@ -527,7 +693,23 @@ function clearHighlights() {
       'bar-sorted',
       'bar-overwrite',
       'bar-subrange',
-    );
+    )
+    state.svg?.querySelectorAll('g.node').forEach( g => {
+      g.classList.remove('node-current', 'node-compare', 'node-insert', 'node-found');
+    });
+
+    // persist sorted markers for arrays
+    for (const idx of state.sortedMarkers) state.barEls[idx]?.classList.add('bar-sorted');
+
+    // persist current subrange, if any (merge/quick)
+    if (state.currentRange) {
+      const { l, r } = state.currentRange;
+      for (let i = l; i <= r; i++)state.barEls[i]?.classList.add('bar-subrange');
+    }
+
+    if (state.done) {
+      for (const r of state.barEls) r.classList.add('bar-done');
+    }
   }
 
   // Re-apply sorted markers after clearning (they persist across steps)
@@ -558,15 +740,24 @@ function draw(events) {
     if (lineHint) highlightLine(lineHint);
 
     switch (ev.type) {
+      // INIT (array vs. tree)
       case 'init': {
-        // Set initial data and draw bars
-        state.data = ev.payload.a.slice();
-        state.done = false;
-        state.sortedMarkers.clear();
-        initSVG();
+        if (currentAlgo.id === 'bst') {
+          // BST: payload has a full tree snapshot
+          state.tree = ev.payload.tree;
+          drawBST();
+        } else {
+          // Array-backed viz (sorts / stack / queue)
+          const arr = ev.payload?.a?.slice?.();
+          if (arr) state.data = arr;
+          state.done = false;
+          state.sortedMarkers.clear();
+          initSVG();
+        }
         break;
       }
-      case 'markSubarray': { // NEW
+      // SORTING AND ARRAY EVENTS
+      case 'markSubarray': { 
         clearHighlights();
         const { l, r } = ev.payload;
         state.currentRange = { l, r };
@@ -577,8 +768,8 @@ function draw(events) {
       }
       case 'setPivot': {
         // Persist pivot highlight until cleared/recomputed
-        const { p } = ev.payload;
         clearHighlights(); // this optional: keeps UI focused
+        const { p } = ev.payload;
         state.barEls[p]?.classList.add('bar-pivot');
         break;
       }
@@ -587,9 +778,11 @@ function draw(events) {
         els.cmps.textContent = String(state.cmps);
         const { j, p } = ev.payload;
         clearHighlights(); // clear transient classes
-        // Re-apply pivot and subrange shading (keep focus)
         state.barEls[p]?.classList.add('bar-pivot');
-        // compare current j with pivot
+        if (state.currentRange) {
+          const { l, r } = state.currentRange;
+          for (let i = l; i <= r; i++) state.barEls[i]?.classList.add('bar-subrange');
+        }
         highlightPair(j, p, 'bar-compare');
         break;
       }
@@ -603,9 +796,9 @@ function draw(events) {
         }
         break;
       }
-      case 'overwrite': { // NEW
+      case 'overwrite': { 
         // write a value back into a[k]
-        const { k, value, a } = ev.payload;
+        const { k, value } = ev.payload;
         updateBar(k, value);
         state.barEls[k]?.classList.add('bar-overwrite');
         // keep subrange shading if it was present; clear transient compare/swap
@@ -652,16 +845,11 @@ function draw(events) {
         break;
       }
       case 'clear': {
-        // Clear transient highlights, but keep subrange shading (reapply)
-        const shaded = [...document.querySelectorAll('.bar-subrange')].map(el => Number(el.dataset.index));
         clearHighlights();
-        // re-apply subrange if we just cleared it
-        for (const idx of shaded) state.barEls[idx]?.classList.add('bar-subrange');
         break;
       }
       case 'done': {
         state.done = true;
-        clearHighlights(); // applies bar-done style to all bars
         // Mark all as sorted so they turn green like other algos at completion
         state.sortedMarkers.clear();
         for (let k = 0; k < state.barEls.length; k++) {
@@ -670,9 +858,10 @@ function draw(events) {
         clearHighlights(); // re-applies bar-sorted + bar-done
         break;
       }
+      // STACK / QUEUE
       case 'push': {
         // Update data, rebuild SVG to reflect new length, and highlight the new top
-        const { index, value, a } = ev.payload;
+        const { index, a } = ev.payload;
         state.data = a.slice();
         initSVG();
         state.barEls[index]?.classList.add('bar-push');
@@ -680,7 +869,7 @@ function draw(events) {
       }
       case 'pop': {
         // Rebuild with the shorter array and briefly mark the former top
-        const { index, value, a} = ev.payload;
+        const { index, a} = ev.payload;
         state.data = a.slice();
         initSVG();
         // If the array shrank, index might be out of range now-safe check
@@ -690,14 +879,14 @@ function draw(events) {
         break;
       }
       case 'enqueue': {
-        const { index, value, a } = ev.payload;
+        const { index, a } = ev.payload;
         state.data = a.slice();
         initSVG(); // length may have changed
         state.barEls[index]?.classList.add('bar-enqueue'); // flash new rear
         break;
       }
       case 'dequeue': {
-        const{ from, value, a } = ev.payload;
+        const{ a } = ev.payload;
         // from is 0, but treat it like "the position that left"
         state.data = a.slice();
         initSVG(); // items shifted left
@@ -705,6 +894,37 @@ function draw(events) {
         if (state.barEls.length > 0) state.barEls[0]?.classList.add('bar-dequeue');
         break;
       }
+      // BST EVENTS
+      case 'setCurrent': {
+        if (currentAlgo.id !== 'bst') break;
+        clearHighlights();
+        nodeEl(ev.payload.id)?.classList.add('node-current');
+        break;
+      }
+      case 'compareNode': {
+        if (currentAlgo.id !== 'bst') break;
+        state.cmps++; els.cmps.textContent = String(state.cmps);
+        nodeEl(ev.payload.id)?.classList.add('node-compare');
+        break;
+      }
+      case 'insertNode': {
+        if (currentAlgo.id !== 'bst') break;
+        state.tree = ev.payload.tree;
+        drawBST();
+        nodeEl(ev.payload.id)?.classList.add('node-insert');
+        break;
+      }
+      case 'found': {
+        if (currentAlgo.id !== 'bst') break;
+        nodeEl(ev.payload.id)?.classList.add('node-found');
+        break;
+      }
+      case 'notFound': {
+        if (currentAlgo.id !== 'bst') break;
+        announce (`Key ${ev.payload.key} not found`);
+        break;
+      }
+      // ERROR
       case 'error': {
         announce(ev.payload.message || 'Error');
         break;
@@ -733,7 +953,7 @@ function buildFromCurrentAlgo() {
   highlightLine(2);
 
   // Show DS controls for stack; hide otherwise
-  if (currentAlgo.type === 'ds') {
+  if (currentAlgo.type === 'ds' || currentAlgo.type === 'tree') {
     ensureDSControls();
     configureDSControlsForCurrent();
   } else {

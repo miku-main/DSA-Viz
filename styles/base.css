@@ -361,3 +361,27 @@ button:hover, select:hover, input[type="range"]:hover {
   fill: #f59e0b;
   filter: brightness(1.1);
 }
+
+/* BST (tree) styles */
+.edge {
+  stroke: #64748b;
+  stroke-width: 2;
+}
+
+.node > circle {
+  fill: #0f172a;  /* base node fill */
+  stroke: #1f2937;
+  stroke-width: 2;
+}
+
+.node .node-label {
+  fill: #e2e8f0;
+  font-weight: 600;
+  font-size: 12px;
+}
+
+/* Highlights */
+.node-current > circle { stroke: var(--accent); stroke-width: 3; }
+.node-compare > circle { filter: brightness(1.15); }
+.node-insert > circle { fill: #22c55e; }
+.node-found > circle { fill: #16a34a; }

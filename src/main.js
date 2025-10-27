@@ -922,7 +922,7 @@ function draw(events) {
       }
       case 'notFound': {
         if (currentAlgo.id !== 'bst') break;
-        announce (`Key ${ev.payload.key} not found`);
+        announce(`Key ${ev.payload.key} not found`);
         break;
       }
       // ERROR

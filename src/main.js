@@ -695,7 +695,7 @@ function clearHighlights() {
       'bar-subrange',
     )
   }
-  
+  // Clear BST node highlights (once)
   state.svg?.querySelectorAll('g.node').forEach( g => {
     g.classList.remove('node-current', 'node-compare', 'node-insert', 'node-found');
   });

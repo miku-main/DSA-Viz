@@ -93,7 +93,7 @@ export function bstInsertOp(tree, rawKey) {
     const parent = t0.nodes.find(n => n.id === parentId);
     if (side === 'L') parent.left = id; else parent.right = id;
 
-    events.push({ t: tick++, type: 'inserNode', payload: { id, key, parentId, side, tree: cloneTree(t0), line: 10 } });
+    events.push({ t: tick++, type: 'insertNode', payload: { id, key, parentId, side, tree: cloneTree(t0), line: 10 } });
     events.push({ t: tick++, type: 'clear', payload: {} });
     return events;
 }

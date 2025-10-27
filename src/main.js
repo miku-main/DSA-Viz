@@ -419,7 +419,7 @@ function initTreeSVG() {
   svg.setAttribute('aria-label', 'Binary Search Tree visualization');
   els.canvas.appendChild(svg);
 
-  state.avg = svg;
+  state.svg = svg;
 }
 
 // Simple layered + inorder layout to avoid overlaps
@@ -694,22 +694,23 @@ function clearHighlights() {
       'bar-overwrite',
       'bar-subrange',
     )
-    state.svg?.querySelectorAll('g.node').forEach( g => {
-      g.classList.remove('node-current', 'node-compare', 'node-insert', 'node-found');
-    });
+  }
+  
+  state.svg?.querySelectorAll('g.node').forEach( g => {
+    g.classList.remove('node-current', 'node-compare', 'node-insert', 'node-found');
+  });
 
-    // persist sorted markers for arrays
-    for (const idx of state.sortedMarkers) state.barEls[idx]?.classList.add('bar-sorted');
+  // persist sorted markers for arrays
+  for (const idx of state.sortedMarkers) state.barEls[idx]?.classList.add('bar-sorted');
 
-    // persist current subrange, if any (merge/quick)
-    if (state.currentRange) {
-      const { l, r } = state.currentRange;
-      for (let i = l; i <= r; i++)state.barEls[i]?.classList.add('bar-subrange');
-    }
+  // persist current subrange, if any (merge/quick)
+  if (state.currentRange) {
+    const { l, r } = state.currentRange;
+    for (let i = l; i <= r; i++)state.barEls[i]?.classList.add('bar-subrange');
+  }
 
-    if (state.done) {
-      for (const r of state.barEls) r.classList.add('bar-done');
-    }
+  if (state.done) {
+    for (const r of state.barEls) r.classList.add('bar-done');
   }
 
   // Re-apply sorted markers after clearning (they persist across steps)

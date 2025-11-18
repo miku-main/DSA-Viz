@@ -32,7 +32,8 @@ import { mergeSort } from './algos/sorting/mergesort.js';
 import { quickSort } from './algos/sorting/quicksort.js';
 import { stackInit, stackOp } from './algos/stack.js';
 import { queueInit, queueOp } from './algos/queue.js';
-import { bstInit, bstInsertOp, bstSearchOp } from './algos/bst.js';
+import { bstInit, bstInsertOp, bstSearchOp, bstDeleteOp } from './algos/bst.js';
+
 
 // Query a helper to avoid repetition
 const $ = (sel) => document.querySelector(sel);
@@ -595,37 +596,31 @@ function ensureDSControls() {
   const secondaryBtn = document.createElement('button');
   secondaryBtn.className = 'btn';
 
+  const tertiaryBtn = document.createElement('button');
+  tertiaryBtn.className = 'btn';
+  tertiaryBtn.style.display = 'none';
+
   // handler factory that dispatches to the right DS + action
   function runAction(kind) {
     // choose implementation per selected DS
     if (currentAlgo.id === 'stack') {
-      if (kind === 'primary') {
-        const evts = window.stackOp
-          ? stackOp(state.data, 'push', Number(input.value))
-          : []; // fallback if not imported
-        playOpEvents(evts);
-      } else {
-        const evts = stackOp(state.data, 'pop');
-        playOpEvents(evts);
-      }
+      const evts = kind === 'primary'
+        ? stackOp(state.data, 'push', Number(input.value))
+        : stackOp(state.data, 'pop');
+      playOpEvents(evts);
     } else if (currentAlgo.id === 'queue') {
-      if (kind === 'primary') {
-        const evts = queueOp(state.data, 'enqueue', Number(input.value));
-        playOpEvents(evts);
-      } else {
-        const evts = queueOp(state.data, 'dequeue');
-        playOpEvents(evts);
-      }
+      const evts = kind === 'queue'
+        ? queueOp(state.data, 'enqueue', Number(input.value))
+        : queueOp(state.data, 'dequeue');
+      playOpEvents(evts);
     } else if (currentAlgo.id === 'bst') {
       if (kind === 'primary') {
-        const evts = bstInsertOp(state.tree, Number(dsControls.input.value));
-        playOpEvents(evts);
-      } else {
-        const evts = bstSearchOp(state.tree, Number(dsControls.input.value));
-        playOpEvents(evts);
+        playOpEvents(bstInsertOp(state.tree, Number(input.value)));
+      } else if (kind === 'secondary') {
+        playOpEvents(bstSearchOp(state.tree, Number(input.value)));
+      } else if (king === 'tertiary') {
+        playOpEvents(bstDeleteOp(state.tree, Number(input.value)));
       }
-      dsControls.input.value = '';
-      dsControls.input.focus();
     }
     input.value = '';
     input.focus();
@@ -633,10 +628,11 @@ function ensureDSControls() {
 
   primaryBtn.addEventListener('click', () => runAction('primary'));
   secondaryBtn.addEventListener('click', () => runAction('secondary'));
+  tertiaryBtn.addEventListener('click', () => runAction('tertiary'));
 
-  wrap.append(input, primaryBtn, secondaryBtn);
+  wrap.append(input, primaryBtn, secondaryBtn, tertiaryBtn);
   footer.appendChild(wrap);
-  dsControls = { wrap, input, primaryBtn, secondaryBtn };
+  dsControls = { wrap, input, primaryBtn, secondaryBtn, tertiaryBtn };
   return dsControls;
 }
 
@@ -648,21 +644,29 @@ function removeDSControls() {
 // Update labels per DS when building
 function configureDSControlsForCurrent() {
   if (!dsControls) return;
+  const { input, primaryBtn, secondaryBtn, tertiaryBtn } = dsControls;
+
   if (currentAlgo.id === 'stack') {
-    dsControls.primaryBtn.textContent = 'Push';
-    dsControls.secondaryBtn.textContent = 'Pop';
-    dsControls.input.placeholder = 'Value';
-    dsControls.input.disabled = false;
+    primaryBtn.textContent = 'Push';
+    secondaryBtn.textContent = 'Pop';
+    tertiaryBtn.style.display = 'none';
+    input.placeholder = 'Value';
+    input.disabled = false;
   } else if (currentAlgo.id === 'queue') {
-    dsControls.primaryBtn.textContent = 'Enqueue';
-    dsControls.secondaryBtn.textContent = 'Dequeue';
-    dsControls.input.placeholder = 'Value';
-    dsControls.input.disabled = false;
+    primaryBtn.textContent = 'Enqueue';
+    secondaryBtn.textContent = 'Dequeue';
+    tertiaryBtn.style.display = 'none';
+    input.placeholder = 'Value';
+    input.disabled = false;
   } else if (currentAlgo.id === 'bst') {
-    dsControls.primaryBtn.textContent = 'Insert';
-    dsControls.secondaryBtn.textContent = 'Search';
-    dsControls.input.placeholder = 'Key';
-    dsControls.input.disabled = false;
+    primaryBtn.textContent = 'Insert';
+    secondaryBtn.textContent = 'Search';
+    tertiaryBtn.textContent = 'Delete';
+    tertiaryBtn.style.display = '';
+    input.placeholder = 'Key';
+    input.disabled = false;
+  } else {
+    tertiaryBtn.style.display = 'none';
   }
 }
 
@@ -913,6 +917,29 @@ function draw(events) {
         state.tree = ev.payload.tree;
         drawBST();
         nodeEl(ev.payload.id)?.classList.add('node-insert');
+        break;
+      }
+      case 'nodeDeleteTarget': {
+        if (currentAlgo.id !== 'bst') break;
+        nodeEl(ev.payload.id)?.classList.add('node-delete');
+        break;
+      }
+      case 'markSuccessor': {
+        if (currentAlgo.id !== 'bst') break;
+        nodeEl(ev.payload.id)?.classList.add('node-successor');
+        break;
+      }
+      case 'replaceKey': {
+        if (currentAlgo.id !== 'bst') break;
+        state.tree = ev.payload.tree; // snapshot with key replaced
+        drawBST();
+        nodeEl(ev.payload.id)?.classList.add('node-replaced');
+        break;
+      }
+      case 'updateTree': {
+        if (currentAlgo.id !== 'bst') break;
+        state.tree = ev.payload.tree; // snapshot after relinking/unlinking
+        drawBST();
         break;
       }
       case 'found': {

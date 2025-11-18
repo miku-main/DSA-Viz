@@ -385,3 +385,8 @@ button:hover, select:hover, input[type="range"]:hover {
 .node-compare > circle { filter: brightness(1.15); }
 .node-insert > circle { fill: #22c55e; }
 .node-found > circle { fill: #16a34a; }
+
+/* BST delete visuals */
+.node-delete > circle { fill: #ef4444; } /* target to delete */
+.node-successor > circle { fill: #f59e0b; } /* chosen successor */
+.node-replaced > circle { fill: #22c55e; } /* node whose key was replaced */
